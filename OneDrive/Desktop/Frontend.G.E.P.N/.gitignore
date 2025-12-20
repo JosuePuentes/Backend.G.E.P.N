@@ -31,4 +31,8 @@ Thumbs.db
 # Variables de entorno
 .env
 .env.local
+.env.*
+
+# MongoDB
+*.log
 

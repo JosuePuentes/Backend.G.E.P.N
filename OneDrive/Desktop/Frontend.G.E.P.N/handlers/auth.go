@@ -2,31 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
+	"gepn/database"
 	"gepn/models"
 	"net/http"
 	"time"
 )
 
-// Almacenamiento temporal en memoria (en producción usar base de datos)
-var usuarios = map[string]*models.Usuario{
-	"POL001": {
-		ID:         1,
-		Credencial: "POL001",
-		PIN:        "123456",
-		Nombre:     "Juan Pérez",
-		Rango:      "Oficial",
-		Activo:     true,
-	},
-	"POL002": {
-		ID:         2,
-		Credencial: "POL002",
-		PIN:        "654321",
-		Nombre:     "María González",
-		Rango:      "Sargento",
-		Activo:     true,
-	},
-}
-
+// Almacenamiento temporal de tokens en memoria (los tokens pueden estar en memoria)
 var tokens = make(map[string]*models.Usuario)
 
 // LoginPolicialHandler maneja el login de policiales
@@ -42,9 +24,9 @@ func LoginPolicialHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validar credenciales
-	usuario, exists := usuarios[req.Credencial]
-	if !exists || usuario.PIN != req.PIN {
+	// Validar credenciales desde MongoDB
+	usuario, err := database.ObtenerUsuarioPorCredencial(req.Credencial)
+	if err != nil || usuario.PIN != req.PIN {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -87,6 +69,14 @@ func generateToken() string {
 // GetUsuarioFromToken obtiene el usuario desde el token
 func GetUsuarioFromToken(token string) (*models.Usuario, bool) {
 	usuario, exists := tokens[token]
-	return usuario, exists
+	if !exists {
+		return nil, false
+	}
+	// Actualizar usuario desde la base de datos para asegurar datos actualizados
+	usuarioActualizado, err := database.ObtenerUsuarioPorID(usuario.ID)
+	if err != nil {
+		return usuario, true // Retornar el usuario del token si falla la actualización
+	}
+	return usuarioActualizado, true
 }
 

@@ -2,15 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"gepn/database"
 	"gepn/models"
 	"net/http"
-	"strconv"
-	"time"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
-// Almacenamiento temporal en memoria
-var detenidos = []models.Detenido{}
-var detenidoIDCounter = 1
 
 // CrearDetenidoHandler crea un nuevo registro de detenido
 func CrearDetenidoHandler(w http.ResponseWriter, r *http.Request) {
@@ -33,15 +29,15 @@ func CrearDetenidoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	detenido.ID = detenidoIDCounter
-	detenidoIDCounter++
 	detenido.OficialID = usuario.ID
-	detenido.FechaDetencion = time.Now()
 	if detenido.Estado == "" {
 		detenido.Estado = "detenido"
 	}
 
-	detenidos = append(detenidos, detenido)
+	if err := database.CrearDetenido(&detenido); err != nil {
+		http.Error(w, "Error al crear detenido", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -60,6 +56,12 @@ func ListarDetenidosHandler(w http.ResponseWriter, r *http.Request) {
 	_, ok := GetUsuarioFromToken(token)
 	if !ok {
 		http.Error(w, "No autorizado", http.StatusUnauthorized)
+		return
+	}
+
+	detenidos, err := database.ListarDetenidos()
+	if err != nil {
+		http.Error(w, "Error al listar detenidos", http.StatusInternalServerError)
 		return
 	}
 
@@ -84,20 +86,19 @@ func ObtenerDetenidoHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Obtener ID de la query string
 	idStr := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
 		http.Error(w, "ID inválido", http.StatusBadRequest)
 		return
 	}
 
-	for _, d := range detenidos {
-		if d.ID == id {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(d)
-			return
-		}
+	detenido, err := database.ObtenerDetenidoPorID(id)
+	if err != nil {
+		http.Error(w, "Detenido no encontrado", http.StatusNotFound)
+		return
 	}
 
-	http.Error(w, "Detenido no encontrado", http.StatusNotFound)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(detenido)
 }
 

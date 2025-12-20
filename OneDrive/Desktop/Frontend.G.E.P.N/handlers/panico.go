@@ -2,14 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"gepn/database"
 	"gepn/models"
 	"net/http"
-	"time"
 )
-
-// Almacenamiento temporal en memoria
-var alertasPanico = []models.Panico{}
-var panicoIDCounter = 1
 
 // ActivarPanicoHandler activa el botón de pánico
 func ActivarPanicoHandler(w http.ResponseWriter, r *http.Request) {
@@ -38,17 +34,17 @@ func ActivarPanicoHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Crear alerta de pánico
 	alerta := models.Panico{
-		ID:              panicoIDCounter,
-		OficialID:       usuario.ID,
-		Latitud:         req.Latitud,
-		Longitud:        req.Longitud,
-		Ubicacion:       req.Ubicacion,
-		FechaActivacion: time.Now(),
-		Estado:          "activo",
+		OficialID: usuario.ID,
+		Latitud:   req.Latitud,
+		Longitud:  req.Longitud,
+		Ubicacion: req.Ubicacion,
+		Estado:    "activo",
 	}
-	panicoIDCounter++
 
-	alertasPanico = append(alertasPanico, alerta)
+	if err := database.CrearAlertaPanico(&alerta); err != nil {
+		http.Error(w, "Error al crear alerta de pánico", http.StatusInternalServerError)
+		return
+	}
 
 	// En producción, aquí se enviaría notificación a central, otros oficiales, etc.
 	response := map[string]interface{}{
@@ -76,7 +72,13 @@ func ListarAlertasPanicoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	alertas, err := database.ListarAlertasPanico()
+	if err != nil {
+		http.Error(w, "Error al listar alertas de pánico", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(alertasPanico)
+	json.NewEncoder(w).Encode(alertas)
 }
 

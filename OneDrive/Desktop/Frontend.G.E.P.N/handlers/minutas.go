@@ -2,15 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
+	"gepn/database"
 	"gepn/models"
 	"net/http"
-	"strconv"
-	"time"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
-// Almacenamiento temporal en memoria
-var minutas = []models.Minuta{}
-var minutaIDCounter = 1
 
 // CrearMinutaHandler crea una nueva minuta digital
 func CrearMinutaHandler(w http.ResponseWriter, r *http.Request) {
@@ -33,12 +29,12 @@ func CrearMinutaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	minuta.ID = minutaIDCounter
-	minutaIDCounter++
 	minuta.OficialID = usuario.ID
-	minuta.FechaCreacion = time.Now()
 
-	minutas = append(minutas, minuta)
+	if err := database.CrearMinuta(&minuta); err != nil {
+		http.Error(w, "Error al crear minuta", http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -57,6 +53,12 @@ func ListarMinutasHandler(w http.ResponseWriter, r *http.Request) {
 	_, ok := GetUsuarioFromToken(token)
 	if !ok {
 		http.Error(w, "No autorizado", http.StatusUnauthorized)
+		return
+	}
+
+	minutas, err := database.ListarMinutas()
+	if err != nil {
+		http.Error(w, "Error al listar minutas", http.StatusInternalServerError)
 		return
 	}
 
@@ -81,20 +83,19 @@ func ObtenerMinutaHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Obtener ID de la query string
 	idStr := r.URL.Query().Get("id")
-	id, err := strconv.Atoi(idStr)
+	id, err := primitive.ObjectIDFromHex(idStr)
 	if err != nil {
 		http.Error(w, "ID inválido", http.StatusBadRequest)
 		return
 	}
 
-	for _, m := range minutas {
-		if m.ID == id {
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(m)
-			return
-		}
+	minuta, err := database.ObtenerMinutaPorID(id)
+	if err != nil {
+		http.Error(w, "Minuta no encontrada", http.StatusNotFound)
+		return
 	}
 
-	http.Error(w, "Minuta no encontrada", http.StatusNotFound)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(minuta)
 }
 

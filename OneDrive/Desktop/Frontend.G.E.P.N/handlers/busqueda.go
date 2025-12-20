@@ -2,33 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"gepn/database"
 	"gepn/models"
 	"net/http"
-	"time"
 )
-
-// Almacenamiento temporal en memoria
-var busquedas = []models.BusquedaCedula{}
-var masBuscados = []models.MasBuscado{
-	{
-		ID:           1,
-		Cedula:       "1234567890",
-		Nombre:       "Juan",
-		Apellido:     "Delincuente",
-		Motivo:       "Robo a mano armada",
-		Prioridad:    "alta",
-		VecesBuscado: 15,
-	},
-	{
-		ID:           2,
-		Cedula:       "0987654321",
-		Nombre:       "María",
-		Apellido:     "Fugitiva",
-		Motivo:       "Homicidio",
-		Prioridad:    "alta",
-		VecesBuscado: 12,
-	},
-}
 
 // BuscarCedulaHandler busca una cédula
 func BuscarCedulaHandler(w http.ResponseWriter, r *http.Request) {
@@ -53,32 +30,28 @@ func BuscarCedulaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Registrar búsqueda
-	busqueda := models.BusquedaCedula{
-		Cedula:        req.Cedula,
-		FechaBusqueda: time.Now(),
-		OficialID:     usuario.ID,
-	}
-
 	// Buscar en los más buscados
+	masBuscado, err := database.BuscarMasBuscadoPorCedula(req.Cedula)
 	var encontrado bool
 	var resultado models.MasBuscado
-	for _, mb := range masBuscados {
-		if mb.Cedula == req.Cedula {
-			encontrado = true
-			resultado = mb
-			busqueda.Resultado = "encontrado"
-			busqueda.Nombre = mb.Nombre
-			busqueda.Apellido = mb.Apellido
-			break
-		}
+	
+	busqueda := models.BusquedaCedula{
+		Cedula:    req.Cedula,
+		OficialID: usuario.ID,
 	}
-
-	if !encontrado {
+	
+	if err == nil && masBuscado != nil {
+		encontrado = true
+		resultado = *masBuscado
+		busqueda.Resultado = "encontrado"
+		busqueda.Nombre = masBuscado.Nombre
+		busqueda.Apellido = masBuscado.Apellido
+	} else {
 		busqueda.Resultado = "no_encontrado"
 	}
 
-	busquedas = append(busquedas, busqueda)
+	// Registrar búsqueda en MongoDB
+	database.CrearBusqueda(&busqueda)
 
 	// Respuesta
 	response := map[string]interface{}{
@@ -106,6 +79,12 @@ func ListarMasBuscadosHandler(w http.ResponseWriter, r *http.Request) {
 	_, ok := GetUsuarioFromToken(token)
 	if !ok {
 		http.Error(w, "No autorizado", http.StatusUnauthorized)
+		return
+	}
+
+	masBuscados, err := database.ListarMasBuscados()
+	if err != nil {
+		http.Error(w, "Error al listar más buscados", http.StatusInternalServerError)
 		return
 	}
 
