@@ -1,0 +1,6 @@
+Este archivo está en la raíz del repositorio.
+Si Render puede ver este archivo, el Root Directory está correcto.
+Si no lo ve, el Root Directory está mal configurado.
+
+El go.mod también debe estar en esta misma ubicación.
+
