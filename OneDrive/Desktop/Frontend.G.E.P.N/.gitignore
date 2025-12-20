@@ -1,0 +1,34 @@
+# Binarios
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+gepn
+GEPN
+
+# Archivos de prueba
+*.test
+*.out
+
+# Dependencias
+vendor/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Variables de entorno
+.env
+.env.local
+
