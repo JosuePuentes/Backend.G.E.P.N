@@ -14,6 +14,7 @@ func SetupRoutes() *http.ServeMux {
 	mux.HandleFunc("/health", handlers.HealthHandler)
 	mux.HandleFunc("/api/health", handlers.HealthHandler)
 	mux.HandleFunc("/ciudadano", handlers.CiudadanoHandler)
+	mux.HandleFunc("/favicon.ico", handlers.FaviconHandler)
 
 	// Rutas de autenticación
 	mux.HandleFunc("/api/policial/login", handlers.LoginPolicialHandler)
