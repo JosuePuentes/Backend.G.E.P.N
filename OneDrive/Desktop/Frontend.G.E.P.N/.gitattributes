@@ -1,0 +1,21 @@
+# Configuración de Git para GEPN Backend
+
+# Archivos Go
+*.go text eol=lf
+
+# Archivos de configuración
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+
+# Scripts
+Makefile text eol=lf
+*.sh text eol=lf
+
+# Binarios
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+
