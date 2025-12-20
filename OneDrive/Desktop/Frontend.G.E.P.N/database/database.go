@@ -22,10 +22,7 @@ func Connect() error {
 	// Obtener la URI de conexión desde variable de entorno
 	mongoURI := os.Getenv("MONGODB_URI")
 	if mongoURI == "" {
-		// Si no está configurada, usar la URI proporcionada (reemplazar <db_password> con la contraseña real)
-		// NOTA: En producción, siempre usa variables de entorno para mayor seguridad
-		mongoURI = "mongodb+srv://Drocolven2019:Drocolven2019@drocolven2019.eof9ilx.mongodb.net/?appName=Drocolven2019"
-		log.Println("⚠️  Usando URI por defecto. Configura MONGODB_URI en variables de entorno para mayor seguridad")
+		log.Fatal("❌ MONGODB_URI no está configurada. Por favor, configura la variable de entorno MONGODB_URI con tu cadena de conexión de MongoDB")
 	}
 
 	// Crear contexto con timeout
