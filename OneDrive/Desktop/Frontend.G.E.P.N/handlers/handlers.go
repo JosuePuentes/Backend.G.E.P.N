@@ -53,3 +53,9 @@ func CiudadanoHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// FaviconHandler maneja las peticiones de favicon (evita 404 en logs)
+func FaviconHandler(w http.ResponseWriter, r *http.Request) {
+	// Responder con 204 No Content para evitar el 404
+	w.WriteHeader(http.StatusNoContent)
+}
+
