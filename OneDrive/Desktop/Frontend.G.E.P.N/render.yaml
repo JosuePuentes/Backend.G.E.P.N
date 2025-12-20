@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: gepn-backend
+    env: go
+    buildCommand: go build -o app
+    startCommand: ./app
+    envVars:
+      - key: PORT
+        value: 8080
+
