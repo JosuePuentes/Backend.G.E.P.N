@@ -2,7 +2,7 @@ services:
   - type: web
     name: gepn-backend
     env: go
-    buildCommand: go build -tags netgo -ldflags '-s -w' -o app
+    buildCommand: go mod tidy && go build -tags netgo -ldflags '-s -w' -o app
     startCommand: ./app
     envVars:
       - key: PORT
