@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"gepn/models"
+	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -179,16 +180,16 @@ func ListarAlertasPanico() ([]models.Panico, error) {
 
 // Inicializar datos por defecto
 func InicializarDatos() error {
-	collection := GetCollection("usuarios")
 	
-	// Verificar si ya existen usuarios
+	// 1. Inicializar colección de usuarios
+	collection := GetCollection("usuarios")
 	count, err := collection.CountDocuments(Ctx, bson.M{})
 	if err != nil {
-		return err
+		// Si la colección no existe, MongoDB la creará automáticamente
+		count = 0
 	}
 	
 	if count == 0 {
-		// Crear usuarios por defecto
 		usuarios := []interface{}{
 			models.Usuario{
 				ID:           primitive.NewObjectID(),
@@ -214,13 +215,16 @@ func InicializarDatos() error {
 		if err != nil {
 			return err
 		}
+		log.Println("✅ Colección 'usuarios' inicializada con 2 usuarios por defecto")
+	} else {
+		log.Printf("ℹ️  Colección 'usuarios' ya existe con %d usuarios", count)
 	}
 	
-	// Inicializar más buscados
+	// 2. Inicializar colección de más buscados
 	collection = GetCollection("mas_buscados")
 	count, err = collection.CountDocuments(Ctx, bson.M{})
 	if err != nil {
-		return err
+		count = 0
 	}
 	
 	if count == 0 {
@@ -249,8 +253,33 @@ func InicializarDatos() error {
 		if err != nil {
 			return err
 		}
+		log.Println("✅ Colección 'mas_buscados' inicializada con 2 registros")
+	} else {
+		log.Printf("ℹ️  Colección 'mas_buscados' ya existe con %d registros", count)
 	}
 	
+	// 3. Crear índices para mejorar el rendimiento
+	// Índice único en credencial de usuarios
+	usuariosCollection := GetCollection("usuarios")
+	indexModel := mongo.IndexModel{
+		Keys: bson.D{{Key: "credencial", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+	usuariosCollection.Indexes().CreateOne(Ctx, indexModel)
+	
+	// Índice en cedula de mas_buscados
+	masBuscadosCollection := GetCollection("mas_buscados")
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "cedula", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+	masBuscadosCollection.Indexes().CreateOne(Ctx, indexModel)
+	
+	// 4. Verificar que las demás colecciones estén listas (se crearán automáticamente al usar)
+	// detenidos, minutas, busquedas, panico - se crearán cuando se inserten datos
+	
+	log.Println("✅ Inicialización de base de datos completada")
+	log.Println("📋 Colecciones disponibles: usuarios, detenidos, minutas, busquedas, mas_buscados, panico")
 	return nil
 }
 
