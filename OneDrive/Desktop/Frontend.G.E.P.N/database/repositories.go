@@ -1,6 +1,7 @@
 package database
 
 import (
+	"errors"
 	"fmt"
 	"gepn/models"
 	"log"
@@ -314,6 +315,9 @@ func ObtenerCiudadanoPorCedula(cedula string) (*models.Ciudadano, error) {
 	var ciudadano models.Ciudadano
 	err := collection.FindOne(Ctx, bson.M{"cedula": cedula, "activo": true}).Decode(&ciudadano)
 	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, mongo.ErrNoDocuments
+		}
 		return nil, err
 	}
 	return &ciudadano, nil

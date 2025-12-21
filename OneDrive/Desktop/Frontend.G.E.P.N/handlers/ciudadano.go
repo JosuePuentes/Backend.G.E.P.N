@@ -2,10 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"gepn/database"
 	"gepn/models"
 	"net/http"
 	"time"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // Almacenamiento temporal de tokens de ciudadanos
@@ -46,8 +49,8 @@ func RegistroCiudadanoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verificar si la cédula ya existe
-	_, err := database.ObtenerCiudadanoPorCedula(req.Cedula)
-	if err == nil {
+	ciudadanoExistente, err := database.ObtenerCiudadanoPorCedula(req.Cedula)
+	if err == nil && ciudadanoExistente != nil {
 		// Ciudadano ya existe
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
@@ -57,6 +60,18 @@ func RegistroCiudadanoHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	// Si el error es "no documents", significa que no existe y podemos continuar
+	if err != nil && !errors.Is(err, mongo.ErrNoDocuments) {
+		// Error real de base de datos
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "Error al verificar cédula: " + err.Error(),
+		})
+		return
+	}
+	// Si llegamos aquí, la cédula no existe y podemos continuar
 
 	// Crear ciudadano
 	ciudadano := &models.Ciudadano{
@@ -69,7 +84,12 @@ func RegistroCiudadanoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := database.CrearCiudadano(ciudadano); err != nil {
-		http.Error(w, "Error al registrar usuario", http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "Error al registrar usuario: " + err.Error(),
+		})
 		return
 	}
 
