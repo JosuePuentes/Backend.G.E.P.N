@@ -15,16 +15,20 @@ import (
 
 // Usuarios
 func CrearUsuario(usuario *models.Usuario) error {
+	ctx, cancel := GetContext()
+	defer cancel()
 	usuario.FechaCreacion = time.Now()
 	collection := GetCollection("usuarios")
-	_, err := collection.InsertOne(Ctx, usuario)
+	_, err := collection.InsertOne(ctx, usuario)
 	return err
 }
 
 func ObtenerUsuarioPorCredencial(credencial string) (*models.Usuario, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
 	collection := GetCollection("usuarios")
 	var usuario models.Usuario
-	err := collection.FindOne(Ctx, bson.M{"credencial": credencial}).Decode(&usuario)
+	err := collection.FindOne(ctx, bson.M{"credencial": credencial}).Decode(&usuario)
 	if err != nil {
 		return nil, err
 	}
@@ -32,9 +36,11 @@ func ObtenerUsuarioPorCredencial(credencial string) (*models.Usuario, error) {
 }
 
 func ObtenerUsuarioPorID(id primitive.ObjectID) (*models.Usuario, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
 	collection := GetCollection("usuarios")
 	var usuario models.Usuario
-	err := collection.FindOne(Ctx, bson.M{"_id": id}).Decode(&usuario)
+	err := collection.FindOne(ctx, bson.M{"_id": id}).Decode(&usuario)
 	if err != nil {
 		return nil, err
 	}
@@ -305,15 +311,19 @@ func CrearCiudadano(ciudadano *models.Ciudadano) error {
 	if !ciudadano.Activo {
 		ciudadano.Activo = true
 	}
+	ctx, cancel := GetContext()
+	defer cancel()
 	collection := GetCollection("ciudadanos")
-	_, err := collection.InsertOne(Ctx, ciudadano)
+	_, err := collection.InsertOne(ctx, ciudadano)
 	return err
 }
 
 func ObtenerCiudadanoPorCedula(cedula string) (*models.Ciudadano, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
 	collection := GetCollection("ciudadanos")
 	var ciudadano models.Ciudadano
-	err := collection.FindOne(Ctx, bson.M{"cedula": cedula, "activo": true}).Decode(&ciudadano)
+	err := collection.FindOne(ctx, bson.M{"cedula": cedula, "activo": true}).Decode(&ciudadano)
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
 			return nil, mongo.ErrNoDocuments
@@ -324,9 +334,11 @@ func ObtenerCiudadanoPorCedula(cedula string) (*models.Ciudadano, error) {
 }
 
 func ObtenerCiudadanoPorID(id primitive.ObjectID) (*models.Ciudadano, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
 	collection := GetCollection("ciudadanos")
 	var ciudadano models.Ciudadano
-	err := collection.FindOne(Ctx, bson.M{"_id": id, "activo": true}).Decode(&ciudadano)
+	err := collection.FindOne(ctx, bson.M{"_id": id, "activo": true}).Decode(&ciudadano)
 	if err != nil {
 		return nil, err
 	}
@@ -335,28 +347,32 @@ func ObtenerCiudadanoPorID(id primitive.ObjectID) (*models.Ciudadano, error) {
 
 // Denuncias
 func CrearDenuncia(denuncia *models.Denuncia) error {
+	ctx, cancel := GetContext()
+	defer cancel()
 	denuncia.FechaDenuncia = time.Now()
 	if denuncia.Estado == "" {
 		denuncia.Estado = "Pendiente"
 	}
 	collection := GetCollection("denuncias")
-	_, err := collection.InsertOne(Ctx, denuncia)
+	_, err := collection.InsertOne(ctx, denuncia)
 	return err
 }
 
 func ObtenerDenunciasPorCiudadano(ciudadanoID primitive.ObjectID) ([]models.Denuncia, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
 	collection := GetCollection("denuncias")
 	
 	// Ordenar por fecha descendente
 	opts := options.Find().SetSort(bson.D{{Key: "fecha_denuncia", Value: -1}})
-	cursor, err := collection.Find(Ctx, bson.M{"ciudadano_id": ciudadanoID}, opts)
+	cursor, err := collection.Find(ctx, bson.M{"ciudadano_id": ciudadanoID}, opts)
 	if err != nil {
 		return nil, err
 	}
-	defer cursor.Close(Ctx)
+	defer cursor.Close(ctx)
 
 	var denuncias []models.Denuncia
-	if err = cursor.All(Ctx, &denuncias); err != nil {
+	if err = cursor.All(ctx, &denuncias); err != nil {
 		return nil, err
 	}
 	return denuncias, nil

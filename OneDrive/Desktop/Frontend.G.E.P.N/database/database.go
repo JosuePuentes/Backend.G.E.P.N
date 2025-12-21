@@ -75,3 +75,8 @@ func GetCollection(name string) *mongo.Collection {
 	return DB.Collection(name)
 }
 
+// GetContext retorna un nuevo contexto con timeout para operaciones de base de datos
+func GetContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 10*time.Second)
+}
+
