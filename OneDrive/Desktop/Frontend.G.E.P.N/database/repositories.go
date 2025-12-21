@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"gepn/models"
 	"log"
+	"math"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -379,6 +380,8 @@ func ObtenerDenunciasPorCiudadano(ciudadanoID primitive.ObjectID) ([]models.Denu
 }
 
 func GenerarNumeroDenuncia() (string, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
 	año := time.Now().Year()
 	collection := GetCollection("denuncias")
 	
@@ -386,7 +389,7 @@ func GenerarNumeroDenuncia() (string, error) {
 	fechaInicio := time.Date(año, 1, 1, 0, 0, 0, 0, time.UTC)
 	fechaFin := time.Date(año+1, 1, 1, 0, 0, 0, 0, time.UTC)
 	
-	count, err := collection.CountDocuments(Ctx, bson.M{
+	count, err := collection.CountDocuments(ctx, bson.M{
 		"fecha_denuncia": bson.M{
 			"$gte": fechaInicio,
 			"$lt":  fechaFin,
@@ -398,5 +401,85 @@ func GenerarNumeroDenuncia() (string, error) {
 	
 	numero := count + 1
 	return fmt.Sprintf("DEN-%d-%04d", año, numero), nil
+}
+
+// Guardias
+func CrearGuardia(guardia *models.Guardia) error {
+	ctx, cancel := GetContext()
+	defer cancel()
+	guardia.FechaInicio = time.Now()
+	guardia.Activa = true
+	collection := GetCollection("guardias")
+	_, err := collection.InsertOne(ctx, guardia)
+	return err
+}
+
+func FinalizarGuardia(oficialID primitive.ObjectID) error {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("guardias")
+	fechaFin := time.Now()
+	_, err := collection.UpdateOne(
+		ctx,
+		bson.M{"oficial_id": oficialID, "activa": true},
+		bson.M{"$set": bson.M{"fecha_fin": fechaFin, "activa": false}},
+	)
+	return err
+}
+
+func ActualizarUsuario(usuario *models.Usuario) error {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("usuarios")
+	_, err := collection.UpdateOne(
+		ctx,
+		bson.M{"_id": usuario.ID},
+		bson.M{"$set": bson.M{
+			"en_guardia": usuario.EnGuardia,
+			"latitud":    usuario.Latitud,
+			"longitud":   usuario.Longitud,
+		}},
+	)
+	return err
+}
+
+func ObtenerOficialesEnGuardiaCercanos(latitud, longitud float64, radioKm float64) ([]models.Usuario, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("usuarios")
+	
+	// Buscar oficiales en guardia
+	var oficiales []models.Usuario
+	cursor, err := collection.Find(ctx, bson.M{"en_guardia": true, "activo": true})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	
+	if err = cursor.All(ctx, &oficiales); err != nil {
+		return nil, err
+	}
+	
+	// Filtrar por distancia (cálculo simple de distancia haversine)
+	oficialesCercanos := []models.Usuario{}
+	for _, oficial := range oficiales {
+		if oficial.Latitud != 0 && oficial.Longitud != 0 {
+			distancia := calcularDistancia(latitud, longitud, oficial.Latitud, oficial.Longitud)
+			if distancia <= radioKm {
+				oficialesCercanos = append(oficialesCercanos, oficial)
+			}
+		}
+	}
+	
+	return oficialesCercanos, nil
+}
+
+// calcularDistancia calcula la distancia en km entre dos puntos usando la fórmula de Haversine
+func calcularDistancia(lat1, lon1, lat2, lon2 float64) float64 {
+	const radioTierra = 6371 // Radio de la Tierra en km
+	dLat := (lat2 - lat1) * 3.141592653589793 / 180.0
+	dLon := (lon2 - lon1) * 3.141592653589793 / 180.0
+	a := 0.5 - math.Cos(dLat)/2 + math.Cos(lat1*3.141592653589793/180.0)*math.Cos(lat2*3.141592653589793/180.0)*(1-math.Cos(dLon))/2
+	return radioTierra * 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 }
 

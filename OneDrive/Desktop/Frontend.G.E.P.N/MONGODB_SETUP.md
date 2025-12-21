@@ -71,3 +71,4 @@ Para verificar que la conexión funciona:
 - Verifica que la IP de Render esté en la whitelist de MongoDB Atlas
 - En MongoDB Atlas, ve a "Network Access" y agrega `0.0.0.0/0` para permitir todas las IPs (solo para desarrollo)
 
+

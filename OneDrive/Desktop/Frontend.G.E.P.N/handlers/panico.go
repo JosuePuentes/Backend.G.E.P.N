@@ -46,15 +46,33 @@ func ActivarPanicoHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// En producción, aquí se enviaría notificación a central, otros oficiales, etc.
-	response := map[string]interface{}{
-		"mensaje": "Alerta de pánico activada",
-		"alerta":  alerta,
+	// Notificar a oficiales cercanos (dentro de 5 km)
+	oficialesCercanos, err := database.ObtenerOficialesEnGuardiaCercanos(
+		req.Latitud,
+		req.Longitud,
+		5.0, // Radio de 5 km
+	)
+	if err == nil {
+		// En producción, aquí se enviarían notificaciones push, SMS, etc.
+		// Por ahora, solo lo registramos en la respuesta
+		response := map[string]interface{}{
+			"mensaje":            "Alerta de pánico activada",
+			"alerta":             alerta,
+			"oficiales_notificados": len(oficialesCercanos),
+			"oficiales":          oficialesCercanos,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(response)
+	} else {
+		response := map[string]interface{}{
+			"mensaje": "Alerta de pánico activada",
+			"alerta":  alerta,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(response)
 	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(response)
 }
 
 // ListarAlertasPanicoHandler lista las alertas de pánico

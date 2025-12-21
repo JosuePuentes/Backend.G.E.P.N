@@ -15,6 +15,20 @@ type Usuario struct {
 	Rango        string            `bson:"rango" json:"rango"`
 	Activo       bool              `bson:"activo" json:"activo"`
 	FechaCreacion time.Time        `bson:"fecha_creacion" json:"fecha_creacion"`
+	EnGuardia    bool              `bson:"en_guardia" json:"en_guardia"`
+	Latitud      float64           `bson:"latitud,omitempty" json:"latitud,omitempty"`
+	Longitud     float64           `bson:"longitud,omitempty" json:"longitud,omitempty"`
+}
+
+// Guardia representa una guardia activa de un oficial
+type Guardia struct {
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	OficialID     primitive.ObjectID `bson:"oficial_id" json:"oficial_id"`
+	FechaInicio   time.Time          `bson:"fecha_inicio" json:"fecha_inicio"`
+	FechaFin      *time.Time         `bson:"fecha_fin,omitempty" json:"fecha_fin,omitempty"`
+	LatitudInicio float64            `bson:"latitud_inicio" json:"latitud_inicio"`
+	LongitudInicio float64           `bson:"longitud_inicio" json:"longitud_inicio"`
+	Activa        bool               `bson:"activa" json:"activa"`
 }
 
 // Detenido representa un registro de detenido
@@ -84,8 +98,10 @@ type Panico struct {
 
 // LoginRequest representa la petición de login
 type LoginRequest struct {
-	Credencial string `json:"credencial"`
-	PIN        string `json:"pin"`
+	Credencial string  `json:"credencial"`
+	PIN        string  `json:"pin"`
+	Latitud    float64 `json:"latitud,omitempty"`
+	Longitud   float64 `json:"longitud,omitempty"`
 }
 
 // LoginResponse representa la respuesta de login

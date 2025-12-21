@@ -44,6 +44,27 @@ func LoginPolicialHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Registrar inicio de guardia si se proporciona ubicación
+	if req.Latitud != 0 && req.Longitud != 0 {
+		guardia := models.Guardia{
+			OficialID:     usuario.ID,
+			FechaInicio:   time.Now(),
+			LatitudInicio: req.Latitud,
+			LongitudInicio: req.Longitud,
+			Activa:        true,
+		}
+		if err := database.CrearGuardia(&guardia); err != nil {
+			// Log error pero continuar con el login
+			// En producción, considerar si esto debe fallar el login
+		} else {
+			// Actualizar usuario con estado de guardia y ubicación
+			usuario.EnGuardia = true
+			usuario.Latitud = req.Latitud
+			usuario.Longitud = req.Longitud
+			database.ActualizarUsuario(usuario)
+		}
+	}
+
 	// Generar token simple (en producción usar JWT)
 	token := generateToken()
 	tokens[token] = usuario
@@ -78,5 +99,41 @@ func GetUsuarioFromToken(token string) (*models.Usuario, bool) {
 		return usuario, true // Retornar el usuario del token si falla la actualización
 	}
 	return usuarioActualizado, true
+}
+
+// FinalizarGuardiaHandler finaliza la guardia de un oficial
+func FinalizarGuardiaHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Obtener usuario del token
+	token := r.Header.Get("Authorization")
+	usuario, ok := GetUsuarioFromToken(token)
+	if !ok {
+		http.Error(w, "No autorizado", http.StatusUnauthorized)
+		return
+	}
+
+	// Finalizar guardia activa
+	err := database.FinalizarGuardia(usuario.ID)
+	if err != nil {
+		http.Error(w, "Error al finalizar guardia", http.StatusInternalServerError)
+		return
+	}
+
+	// Actualizar usuario
+	usuario.EnGuardia = false
+	usuario.Latitud = 0
+	usuario.Longitud = 0
+	database.ActualizarUsuario(usuario)
+
+	response := map[string]interface{}{
+		"mensaje": "Guardia finalizada correctamente",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
