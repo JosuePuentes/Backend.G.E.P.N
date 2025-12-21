@@ -18,6 +18,14 @@ func SetupRoutes() *http.ServeMux {
 
 	// Rutas de autenticación
 	mux.HandleFunc("/api/policial/login", handlers.LoginPolicialHandler)
+	
+	// Rutas de ciudadanos (públicas)
+	mux.HandleFunc("/api/ciudadano/registro", handlers.RegistroCiudadanoHandler)
+	mux.HandleFunc("/api/ciudadano/login", handlers.LoginCiudadanoHandler)
+	
+	// Rutas de denuncias (requieren autenticación de ciudadano)
+	mux.HandleFunc("/api/denuncia/crear", handlers.CrearDenunciaHandler)
+	mux.HandleFunc("/api/denuncia/mis-denuncias", handlers.MisDenunciasHandler)
 
 	// Rutas protegidas - Detenidos
 	mux.HandleFunc("/api/detenidos", handlers.CrearDetenidoHandler)

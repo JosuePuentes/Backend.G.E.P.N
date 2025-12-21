@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"gepn/models"
 	"log"
 	"time"
@@ -274,11 +275,108 @@ func InicializarDatos() error {
 	}
 	masBuscadosCollection.Indexes().CreateOne(Ctx, indexModel)
 	
+	// Índice único en cedula de ciudadanos
+	ciudadanosCollection := GetCollection("ciudadanos")
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "cedula", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+	ciudadanosCollection.Indexes().CreateOne(Ctx, indexModel)
+	
+	// Índice en ciudadano_id de denuncias
+	denunciasCollection := GetCollection("denuncias")
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "ciudadano_id", Value: 1}},
+	}
+	denunciasCollection.Indexes().CreateOne(Ctx, indexModel)
+	
 	// 4. Verificar que las demás colecciones estén listas (se crearán automáticamente al usar)
 	// detenidos, minutas, busquedas, panico - se crearán cuando se inserten datos
 	
 	log.Println("✅ Inicialización de base de datos completada")
-	log.Println("📋 Colecciones disponibles: usuarios, detenidos, minutas, busquedas, mas_buscados, panico")
+	log.Println("📋 Colecciones disponibles: usuarios, detenidos, minutas, busquedas, mas_buscados, panico, ciudadanos, denuncias")
 	return nil
+}
+
+// Ciudadanos
+func CrearCiudadano(ciudadano *models.Ciudadano) error {
+	ciudadano.FechaRegistro = time.Now()
+	if !ciudadano.Activo {
+		ciudadano.Activo = true
+	}
+	collection := GetCollection("ciudadanos")
+	_, err := collection.InsertOne(Ctx, ciudadano)
+	return err
+}
+
+func ObtenerCiudadanoPorCedula(cedula string) (*models.Ciudadano, error) {
+	collection := GetCollection("ciudadanos")
+	var ciudadano models.Ciudadano
+	err := collection.FindOne(Ctx, bson.M{"cedula": cedula, "activo": true}).Decode(&ciudadano)
+	if err != nil {
+		return nil, err
+	}
+	return &ciudadano, nil
+}
+
+func ObtenerCiudadanoPorID(id primitive.ObjectID) (*models.Ciudadano, error) {
+	collection := GetCollection("ciudadanos")
+	var ciudadano models.Ciudadano
+	err := collection.FindOne(Ctx, bson.M{"_id": id, "activo": true}).Decode(&ciudadano)
+	if err != nil {
+		return nil, err
+	}
+	return &ciudadano, nil
+}
+
+// Denuncias
+func CrearDenuncia(denuncia *models.Denuncia) error {
+	denuncia.FechaDenuncia = time.Now()
+	if denuncia.Estado == "" {
+		denuncia.Estado = "Pendiente"
+	}
+	collection := GetCollection("denuncias")
+	_, err := collection.InsertOne(Ctx, denuncia)
+	return err
+}
+
+func ObtenerDenunciasPorCiudadano(ciudadanoID primitive.ObjectID) ([]models.Denuncia, error) {
+	collection := GetCollection("denuncias")
+	
+	// Ordenar por fecha descendente
+	opts := options.Find().SetSort(bson.D{{Key: "fecha_denuncia", Value: -1}})
+	cursor, err := collection.Find(Ctx, bson.M{"ciudadano_id": ciudadanoID}, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(Ctx)
+
+	var denuncias []models.Denuncia
+	if err = cursor.All(Ctx, &denuncias); err != nil {
+		return nil, err
+	}
+	return denuncias, nil
+}
+
+func GenerarNumeroDenuncia() (string, error) {
+	año := time.Now().Year()
+	collection := GetCollection("denuncias")
+	
+	// Contar denuncias del año actual
+	fechaInicio := time.Date(año, 1, 1, 0, 0, 0, 0, time.UTC)
+	fechaFin := time.Date(año+1, 1, 1, 0, 0, 0, 0, time.UTC)
+	
+	count, err := collection.CountDocuments(Ctx, bson.M{
+		"fecha_denuncia": bson.M{
+			"$gte": fechaInicio,
+			"$lt":  fechaFin,
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	
+	numero := count + 1
+	return fmt.Sprintf("DEN-%d-%04d", año, numero), nil
 }
 

@@ -94,3 +94,75 @@ type LoginResponse struct {
 	Usuario Usuario `json:"usuario"`
 }
 
+// Ciudadano representa un ciudadano registrado
+type Ciudadano struct {
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Nombre        string            `bson:"nombre" json:"nombre"`
+	Cedula        string            `bson:"cedula" json:"cedula"`
+	Telefono      string            `bson:"telefono" json:"telefono"`
+	Contraseña    string            `bson:"contraseña" json:"-"` // No se expone en JSON
+	FechaRegistro time.Time         `bson:"fecha_registro" json:"fecha_registro"`
+	Activo        bool              `bson:"activo" json:"activo"`
+}
+
+// Denuncia representa una denuncia realizada por un ciudadano
+type Denuncia struct {
+	ID                        primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	CiudadanoID               primitive.ObjectID `bson:"ciudadano_id" json:"ciudadano_id"`
+	NumeroDenuncia            string            `bson:"numero_denuncia" json:"numero_denuncia"`
+	// Datos del denunciante
+	NombreDenunciante         string            `bson:"nombre_denunciante" json:"nombre_denunciante"`
+	CedulaDenunciante         string            `bson:"cedula_denunciante" json:"cedula_denunciante"`
+	TelefonoDenunciante       string            `bson:"telefono_denunciante" json:"telefono_denunciante"`
+	FechaNacimientoDenunciante string           `bson:"fecha_nacimiento_denunciante,omitempty" json:"fecha_nacimiento_denunciante,omitempty"`
+	ParroquiaDenunciante      string            `bson:"parroquia_denunciante,omitempty" json:"parroquia_denunciante,omitempty"`
+	// Datos de la denuncia
+	Motivo                    string            `bson:"motivo" json:"motivo"`
+	Hechos                    string            `bson:"hechos" json:"hechos"`
+	// Datos del denunciado
+	NombreDenunciado          string            `bson:"nombre_denunciado,omitempty" json:"nombre_denunciado,omitempty"`
+	DireccionDenunciado       string            `bson:"direccion_denunciado,omitempty" json:"direccion_denunciado,omitempty"`
+	EstadoDenunciado          string            `bson:"estado_denunciado,omitempty" json:"estado_denunciado,omitempty"`
+	MunicipioDenunciado       string            `bson:"municipio_denunciado,omitempty" json:"municipio_denunciado,omitempty"`
+	ParroquiaDenunciado       string            `bson:"parroquia_denunciado,omitempty" json:"parroquia_denunciado,omitempty"`
+	// Metadatos
+	FechaDenuncia             time.Time         `bson:"fecha_denuncia" json:"fecha_denuncia"`
+	Estado                    string            `bson:"estado" json:"estado"` // "Pendiente", "En Proceso", "Resuelta", "Archivada"
+}
+
+// RegistroCiudadanoRequest representa la petición de registro
+type RegistroCiudadanoRequest struct {
+	Nombre     string `json:"nombre"`
+	Cedula     string `json:"cedula"`
+	Telefono   string `json:"telefono"`
+	Contraseña string `json:"contraseña"`
+}
+
+// LoginCiudadanoRequest representa la petición de login
+type LoginCiudadanoRequest struct {
+	Cedula     string `json:"cedula"`
+	Contraseña string `json:"contraseña"`
+}
+
+// CrearDenunciaRequest representa la petición de crear denuncia
+type CrearDenunciaRequest struct {
+	Denunciante struct {
+		Nombre          string `json:"nombre"`
+		Cedula          string `json:"cedula"`
+		Telefono        string `json:"telefono"`
+		FechaNacimiento string `json:"fechaNacimiento,omitempty"`
+		Parroquia       string `json:"parroquia,omitempty"`
+	} `json:"denunciante"`
+	Denuncia struct {
+		Motivo string `json:"motivo"`
+		Hechos string `json:"hechos"`
+	} `json:"denuncia"`
+	Denunciado struct {
+		Nombre    string `json:"nombre,omitempty"`
+		Direccion string `json:"direccion,omitempty"`
+		Estado    string `json:"estado,omitempty"`
+		Municipio string `json:"municipio,omitempty"`
+		Parroquia string `json:"parroquia,omitempty"`
+	} `json:"denunciado,omitempty"`
+}
+
