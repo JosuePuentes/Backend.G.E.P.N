@@ -182,3 +182,50 @@ type CrearDenunciaRequest struct {
 	} `json:"denunciado,omitempty"`
 }
 
+// Pariente representa un pariente de un oficial
+type Pariente struct {
+	Nombre          string `bson:"nombre" json:"nombre"`
+	Cedula          string `bson:"cedula" json:"cedula"`
+	FechaNacimiento string `bson:"fecha_nacimiento,omitempty" json:"fecha_nacimiento,omitempty"`
+}
+
+// Parientes representa los parientes de un oficial
+type Parientes struct {
+	Padre  *Pariente  `bson:"padre,omitempty" json:"padre,omitempty"`
+	Madre  *Pariente  `bson:"madre,omitempty" json:"madre,omitempty"`
+	Esposa *Pariente  `bson:"esposa,omitempty" json:"esposa,omitempty"`
+	Hijos  []Pariente `bson:"hijos,omitempty" json:"hijos,omitempty"`
+}
+
+// Oficial representa un oficial del sistema (RRHH)
+type Oficial struct {
+	ID               primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	PrimerNombre     string             `bson:"primer_nombre" json:"primer_nombre"`
+	SegundoNombre    string             `bson:"segundo_nombre" json:"segundo_nombre"`
+	PrimerApellido   string             `bson:"primer_apellido" json:"primer_apellido"`
+	SegundoApellido  string             `bson:"segundo_apellido" json:"segundo_apellido"`
+	Cedula           string             `bson:"cedula" json:"cedula"`
+	Contraseña       string             `bson:"contraseña" json:"-"`
+	FechaNacimiento  string             `bson:"fecha_nacimiento" json:"fecha_nacimiento"`
+	Estatura         float64            `bson:"estatura" json:"estatura"`
+	ColorPiel        string             `bson:"color_piel" json:"color_piel"`
+	TipoSangre       string             `bson:"tipo_sangre" json:"tipo_sangre"`
+	CiudadNacimiento string             `bson:"ciudad_nacimiento" json:"ciudad_nacimiento"`
+	Credencial       string             `bson:"credencial" json:"credencial"`
+	Rango            string             `bson:"rango" json:"rango"`
+	Destacado        string             `bson:"destacado" json:"destacado"`
+	FechaGraduacion  string             `bson:"fecha_graduacion" json:"fecha_graduacion"`
+	Antiguedad       float64            `bson:"antiguedad" json:"antiguedad"`
+	Estado           string             `bson:"estado" json:"estado"`
+	Municipio        string             `bson:"municipio" json:"municipio"`
+	Parroquia        string             `bson:"parroquia" json:"parroquia"`
+	LicenciaConducir string             `bson:"licencia_conducir,omitempty" json:"licencia_conducir,omitempty"`
+	CarnetMedico     string             `bson:"carnet_medico,omitempty" json:"carnet_medico,omitempty"`
+	FotoCara         string             `bson:"foto_cara" json:"foto_cara"`
+	FotoCarnet       string             `bson:"foto_carnet,omitempty" json:"foto_carnet,omitempty"`
+	QRCode           string             `bson:"qr_code" json:"qr_code,omitempty"`
+	FechaRegistro    time.Time          `bson:"fecha_registro" json:"fecha_registro"`
+	Activo           bool               `bson:"activo" json:"activo"`
+	Parientes        *Parientes         `bson:"parientes,omitempty" json:"parientes,omitempty"`
+}
+

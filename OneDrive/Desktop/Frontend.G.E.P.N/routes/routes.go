@@ -46,6 +46,14 @@ func SetupRoutes() *http.ServeMux {
 	mux.HandleFunc("/api/panico/activar", handlers.ActivarPanicoHandler)
 	mux.HandleFunc("/api/panico/alertas", handlers.ListarAlertasPanicoHandler)
 
+	// Rutas de RRHH (requieren autenticación)
+	mux.HandleFunc("/api/rrhh/registrar-oficial", handlers.RegistrarOficialHandler)
+	mux.HandleFunc("/api/rrhh/generar-qr/", handlers.GenerarQRHandler)
+	mux.HandleFunc("/api/rrhh/verificar-qr/", handlers.VerificarQRHandler)
+	mux.HandleFunc("/api/rrhh/listar-oficiales", handlers.ListarOficialesHandler)
+	mux.HandleFunc("/api/rrhh/ascensos-pendientes", handlers.AscensosPendientesHandler)
+	mux.HandleFunc("/api/rrhh/aprobar-ascenso/", handlers.AprobarAscensoHandler)
+
 	return mux
 }
 

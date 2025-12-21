@@ -6,12 +6,15 @@ import (
 	"gepn/models"
 	"net/http"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Almacenamiento temporal de tokens en memoria (los tokens pueden estar en memoria)
-var tokens = make(map[string]*models.Usuario)
+var tokens = make(map[string]*models.Oficial)
 
 // LoginPolicialHandler maneja el login de policiales
+// Ahora usa la colección de oficiales con bcrypt
 func LoginPolicialHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
@@ -24,9 +27,9 @@ func LoginPolicialHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validar credenciales desde MongoDB
-	usuario, err := database.ObtenerUsuarioPorCredencial(req.Credencial)
-	if err != nil || usuario.PIN != req.PIN {
+	// Buscar oficial por credencial en la colección oficiales
+	oficial, err := database.ObtenerOficialPorCredencial(req.Credencial)
+	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -35,7 +38,19 @@ func LoginPolicialHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !usuario.Activo {
+	// Verificar contraseña con bcrypt
+	err = bcrypt.CompareHashAndPassword([]byte(oficial.Contraseña), []byte(req.PIN))
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Credenciales inválidas",
+		})
+		return
+	}
+
+	// Verificar que esté activo
+	if !oficial.Activo {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusForbidden)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -47,31 +62,34 @@ func LoginPolicialHandler(w http.ResponseWriter, r *http.Request) {
 	// Registrar inicio de guardia si se proporciona ubicación
 	if req.Latitud != 0 && req.Longitud != 0 {
 		guardia := models.Guardia{
-			OficialID:     usuario.ID,
-			FechaInicio:   time.Now(),
-			LatitudInicio: req.Latitud,
+			OficialID:      oficial.ID,
+			FechaInicio:    time.Now(),
+			LatitudInicio:  req.Latitud,
 			LongitudInicio: req.Longitud,
-			Activa:        true,
+			Activa:         true,
 		}
 		if err := database.CrearGuardia(&guardia); err != nil {
 			// Log error pero continuar con el login
 			// En producción, considerar si esto debe fallar el login
-		} else {
-			// Actualizar usuario con estado de guardia y ubicación
-			usuario.EnGuardia = true
-			usuario.Latitud = req.Latitud
-			usuario.Longitud = req.Longitud
-			database.ActualizarUsuario(usuario)
 		}
 	}
 
 	// Generar token simple (en producción usar JWT)
 	token := generateToken()
-	tokens[token] = usuario
+	tokens[token] = oficial
 
-	// Crear respuesta sin el PIN
-	usuarioResp := *usuario
-	usuarioResp.PIN = ""
+	// Convertir oficial a usuario para la respuesta (compatibilidad)
+	usuarioResp := models.Usuario{
+		ID:           oficial.ID,
+		Credencial:   oficial.Credencial,
+		Nombre:       oficial.PrimerNombre + " " + oficial.SegundoNombre + " " + oficial.PrimerApellido + " " + oficial.SegundoApellido,
+		Rango:        oficial.Rango,
+		Activo:       oficial.Activo,
+		FechaCreacion: oficial.FechaRegistro,
+		EnGuardia:    true,
+		Latitud:      req.Latitud,
+		Longitud:     req.Longitud,
+	}
 
 	response := models.LoginResponse{
 		Token:   token,
@@ -88,17 +106,36 @@ func generateToken() string {
 }
 
 // GetUsuarioFromToken obtiene el usuario desde el token
+// Ahora retorna un Usuario basado en el Oficial del token
 func GetUsuarioFromToken(token string) (*models.Usuario, bool) {
-	usuario, exists := tokens[token]
+	oficial, exists := tokens[token]
 	if !exists {
 		return nil, false
 	}
-	// Actualizar usuario desde la base de datos para asegurar datos actualizados
-	usuarioActualizado, err := database.ObtenerUsuarioPorID(usuario.ID)
+	// Actualizar oficial desde la base de datos para asegurar datos actualizados
+	oficialActualizado, err := database.ObtenerOficialPorID(oficial.ID)
 	if err != nil {
-		return usuario, true // Retornar el usuario del token si falla la actualización
+		// Si falla, convertir el oficial del token a usuario
+		usuario := &models.Usuario{
+			ID:            oficial.ID,
+			Credencial:    oficial.Credencial,
+			Nombre:        oficial.PrimerNombre + " " + oficial.SegundoNombre + " " + oficial.PrimerApellido + " " + oficial.SegundoApellido,
+			Rango:         oficial.Rango,
+			Activo:        oficial.Activo,
+			FechaCreacion: oficial.FechaRegistro,
+		}
+		return usuario, true
 	}
-	return usuarioActualizado, true
+	// Convertir oficial a usuario
+	usuario := &models.Usuario{
+		ID:            oficialActualizado.ID,
+		Credencial:    oficialActualizado.Credencial,
+		Nombre:        oficialActualizado.PrimerNombre + " " + oficialActualizado.SegundoNombre + " " + oficialActualizado.PrimerApellido + " " + oficialActualizado.SegundoApellido,
+		Rango:         oficialActualizado.Rango,
+		Activo:        oficialActualizado.Activo,
+		FechaCreacion: oficialActualizado.FechaRegistro,
+	}
+	return usuario, true
 }
 
 // FinalizarGuardiaHandler finaliza la guardia de un oficial
@@ -123,11 +160,8 @@ func FinalizarGuardiaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Actualizar usuario
-	usuario.EnGuardia = false
-	usuario.Latitud = 0
-	usuario.Longitud = 0
-	database.ActualizarUsuario(usuario)
+	// La guardia se finaliza en la base de datos, no necesitamos actualizar usuario aquí
+	// ya que ahora usamos oficiales
 
 	response := map[string]interface{}{
 		"mensaje": "Guardia finalizada correctamente",

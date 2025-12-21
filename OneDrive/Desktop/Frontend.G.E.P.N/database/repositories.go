@@ -298,11 +298,36 @@ func InicializarDatos() error {
 	}
 	denunciasCollection.Indexes().CreateOne(Ctx, indexModel)
 	
-	// 4. Verificar que las demás colecciones estén listas (se crearán automáticamente al usar)
+	// 4. Crear índices para oficiales (RRHH)
+	oficialesCollection := GetCollection("oficiales")
+	// Índice único en credencial
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "credencial", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+	oficialesCollection.Indexes().CreateOne(Ctx, indexModel)
+	// Índice único en cédula
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "cedula", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+	oficialesCollection.Indexes().CreateOne(Ctx, indexModel)
+	// Índice en rango
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "rango", Value: 1}},
+	}
+	oficialesCollection.Indexes().CreateOne(Ctx, indexModel)
+	// Índice en estado
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "estado", Value: 1}},
+	}
+	oficialesCollection.Indexes().CreateOne(Ctx, indexModel)
+	
+	// 5. Verificar que las demás colecciones estén listas (se crearán automáticamente al usar)
 	// detenidos, minutas, busquedas, panico - se crearán cuando se inserten datos
 	
 	log.Println("✅ Inicialización de base de datos completada")
-	log.Println("📋 Colecciones disponibles: usuarios, detenidos, minutas, busquedas, mas_buscados, panico, ciudadanos, denuncias")
+	log.Println("📋 Colecciones disponibles: usuarios, detenidos, minutas, busquedas, mas_buscados, panico, ciudadanos, denuncias, oficiales")
 	return nil
 }
 
@@ -482,4 +507,141 @@ func calcularDistancia(lat1, lon1, lat2, lon2 float64) float64 {
 	a := 0.5 - math.Cos(dLat)/2 + math.Cos(lat1*3.141592653589793/180.0)*math.Cos(lat2*3.141592653589793/180.0)*(1-math.Cos(dLon))/2
 	return radioTierra * 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 }
+
+// Oficiales - Funciones para gestión de oficiales (RRHH)
+func CrearOficial(oficial *models.Oficial) error {
+	ctx, cancel := GetContext()
+	defer cancel()
+	oficial.FechaRegistro = time.Now()
+	if !oficial.Activo {
+		oficial.Activo = true
+	}
+	collection := GetCollection("oficiales")
+	_, err := collection.InsertOne(ctx, oficial)
+	return err
+}
+
+func ObtenerOficialPorCredencial(credencial string) (*models.Oficial, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("oficiales")
+	var oficial models.Oficial
+	err := collection.FindOne(ctx, bson.M{"credencial": credencial, "activo": true}).Decode(&oficial)
+	if err != nil {
+		return nil, err
+	}
+	return &oficial, nil
+}
+
+func ObtenerOficialPorID(id primitive.ObjectID) (*models.Oficial, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("oficiales")
+	var oficial models.Oficial
+	err := collection.FindOne(ctx, bson.M{"_id": id}).Decode(&oficial)
+	if err != nil {
+		return nil, err
+	}
+	return &oficial, nil
+}
+
+func ObtenerOficialPorCedula(cedula string) (*models.Oficial, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("oficiales")
+	var oficial models.Oficial
+	err := collection.FindOne(ctx, bson.M{"cedula": cedula}).Decode(&oficial)
+	if err != nil {
+		return nil, err
+	}
+	return &oficial, nil
+}
+
+func ActualizarOficial(oficial *models.Oficial) error {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("oficiales")
+	_, err := collection.ReplaceOne(ctx, bson.M{"_id": oficial.ID}, oficial)
+	return err
+}
+
+func ListarOficiales(page, limit int, rango, estado string) ([]models.Oficial, int64, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("oficiales")
+	
+	// Construir filtro
+	filter := bson.M{}
+	if rango != "" {
+		filter["rango"] = rango
+	}
+	if estado != "" {
+		filter["estado"] = estado
+	}
+	
+	// Contar total
+	total, err := collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	// Paginación
+	skip := (page - 1) * limit
+	opts := options.Find().SetSkip(int64(skip)).SetLimit(int64(limit)).SetSort(bson.D{{Key: "fecha_registro", Value: -1}})
+	
+	cursor, err := collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+	
+	var oficiales []models.Oficial
+	if err = cursor.All(ctx, &oficiales); err != nil {
+		return nil, 0, err
+	}
+	
+	return oficiales, total, nil
+}
+
+func ObtenerOficialesConAscensosPendientes() ([]models.Oficial, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("oficiales")
+	
+	// Buscar todos los oficiales activos
+	cursor, err := collection.Find(ctx, bson.M{"activo": true})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	
+	var oficiales []models.Oficial
+	if err = cursor.All(ctx, &oficiales); err != nil {
+		return nil, err
+	}
+	
+	// Filtrar por ascensos pendientes (cada 4 años)
+	var oficialesConAscenso []models.Oficial
+	ahora := time.Now()
+	
+	for _, oficial := range oficiales {
+		if oficial.FechaGraduacion != "" {
+			fechaGraduacion, err := time.Parse("2006-01-02", oficial.FechaGraduacion)
+			if err == nil {
+				antiguedad := ahora.Sub(fechaGraduacion).Hours() / 24 / 365.25
+				// Verificar si tiene un ascenso pendiente (cada 4 años)
+				ascensosCompletos := int(antiguedad / 4)
+				antiguedadActual := oficial.Antiguedad
+				if antiguedadActual < float64(ascensosCompletos*4) {
+					oficialesConAscenso = append(oficialesConAscenso, oficial)
+				}
+			}
+		}
+	}
+	
+	return oficialesConAscenso, nil
+}
+
+// VerificarOficialPorQR ya no se usa, la verificación se hace en el handler
+// Esta función se mantiene por compatibilidad pero puede eliminarse
 
