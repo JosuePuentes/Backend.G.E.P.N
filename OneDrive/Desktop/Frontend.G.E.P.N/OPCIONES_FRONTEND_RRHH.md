@@ -316,11 +316,41 @@ El campo "Destacado" es **opcional** y debe dejarse **vacío** al registrar un o
 ```
 **Status Code:** 400 (Bad Request)
 
-## 9. Notas para el Frontend
+## 9. Campos de Fecha - Date Picker (Calendario)
+
+### Campos que Requieren Date Picker
+
+1. **Fecha de Nacimiento** (`fecha_nacimiento`)
+   - Campo obligatorio
+   - Formato: `YYYY-MM-DD` (ejemplo: `1990-01-15`)
+   - Usar calendario para selección
+
+2. **Fecha de Graduación** (`fecha_graduacion`)
+   - Campo obligatorio
+   - Formato: `YYYY-MM-DD` (ejemplo: `2015-06-15`)
+   - Usar calendario para selección
+
+3. **Fechas de Parientes** (opcionales)
+   - Fecha de nacimiento del padre
+   - Fecha de nacimiento de la madre
+   - Fechas de nacimiento de los hijos
+   - Formato: `YYYY-MM-DD`
+
+### Validaciones de Fechas
+
+- La fecha de nacimiento no puede ser mayor a la fecha actual
+- La fecha de graduación no puede ser mayor a la fecha actual
+- La fecha de graduación debe ser al menos 18 años después de la fecha de nacimiento
+
+**Ver:** `INSTRUCCIONES_FRONTEND_DATE_PICKER_RRHH.md` para implementación completa del date picker.
+
+## 10. Notas para el Frontend
 
 1. **Login Policial:** El campo de contraseña en el login policial debe aceptar la contraseña registrada en RRHH. El backend acepta tanto el campo "pin" como "contraseña" en el request de login.
 
 2. **Color de Piel:** No incluir "Indígena" como opción. Usar las opciones listadas arriba.
+
+3. **Date Pickers:** Implementar calendarios para todos los campos de fecha. Ver `INSTRUCCIONES_FRONTEND_DATE_PICKER_RRHH.md` para detalles.
 
 3. **Tipo de Sangre:** Mostrar todos los 8 tipos de sangre disponibles.
 
