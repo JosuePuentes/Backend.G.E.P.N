@@ -567,3 +567,74 @@ func InicializarAdminHandler(w http.ResponseWriter, r *http.Request) {
 		"contraseña": "Admin123!",
 	})
 }
+
+// ResetearPasswordAdminHandler resetea la contraseña del admin a Admin123!
+func ResetearPasswordAdminHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Buscar usuario admin
+	master, err := database.ObtenerUsuarioMasterPorUsuario("admin")
+	if err != nil {
+		// Si no existe, crearlo
+		err = InicializarUsuarioAdmin()
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": "Error al crear/resetear admin: " + err.Error(),
+			})
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]string{
+			"mensaje": "Usuario admin creado",
+			"usuario": "admin",
+			"contraseña": "Admin123!",
+		})
+		return
+	}
+
+	// Hashear nueva contraseña
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("Admin123!"), bcrypt.DefaultCost)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Error al hashear contraseña: " + err.Error(),
+		})
+		return
+	}
+
+	// Actualizar contraseña
+	ctx, cancel := database.GetContext()
+	defer cancel()
+	collection := database.GetCollection("usuarios_master")
+	_, err = collection.UpdateOne(
+		ctx,
+		bson.M{"_id": master.ID},
+		bson.M{"$set": bson.M{
+			"contraseña": string(hashedPassword),
+			"activo":     true,
+		}},
+	)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Error al actualizar contraseña: " + err.Error(),
+		})
+		return
+	}
+
+	log.Printf("✅ Contraseña del admin reseteada correctamente")
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"mensaje": "Contraseña del admin reseteada correctamente",
+		"usuario": "admin",
+		"contraseña": "Admin123!",
+	})
+}
