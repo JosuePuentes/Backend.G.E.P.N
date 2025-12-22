@@ -4,7 +4,7 @@ Este documento contiene instrucciones para verificar y depurar el endpoint de re
 
 ## ✅ Verificaciones del Backend
 
-### 1. Endpoint Verificado
+### 1. Endpoint de Registro Verificado
 
 **Endpoint:** `POST /api/rrhh/registrar-oficial`
 
@@ -386,6 +386,73 @@ Con esta información podremos identificar el problema exacto.
 
 ---
 
+## 📋 Endpoint de Listar Oficiales
+
+### Endpoint Verificado
+
+**Endpoint:** `GET /api/rrhh/listar-oficiales`
+
+**Ubicación:** `routes/routes.go` línea 66
+
+**Handler:** `handlers.ListarOficialesHandler`
+
+**Query Parameters:**
+- `page` (opcional): Número de página (default: 1)
+- `limit` (opcional): Cantidad por página (default: 10, max: 100)
+- `rango` (opcional): Filtrar por rango
+- `estado` (opcional): Filtrar por estado
+
+**Respuesta Exitosa:**
+```json
+{
+  "success": true,
+  "data": {
+    "oficiales": [
+      {
+        "id": "...",
+        "primer_nombre": "Juan",
+        "segundo_nombre": "Carlos",
+        "primer_apellido": "Pérez",
+        "segundo_apellido": "González",
+        "cedula": "V-12345678",
+        "credencial": "POL-12345",
+        "rango": "Oficial",
+        "activo": true,
+        "fecha_nacimiento": "1990-05-15",
+        "estatura": 175.5,
+        "color_piel": "Moreno",
+        "tipo_sangre": "O+",
+        "ciudad_nacimiento": "Caracas",
+        "destacado": "",
+        "fecha_graduacion": "2015-06-15",
+        "antiguedad": 8.5,
+        "estado": "Distrito Capital",
+        "municipio": "Libertador",
+        "parroquia": "Catedral"
+      }
+    ],
+    "total": 150,
+    "page": 1,
+    "limit": 20
+  }
+}
+```
+
+**Status Code:** 200 (OK)
+
+**Notas:**
+- Los datos sensibles (contraseña, parientes, licencia, carnet médico) no se incluyen
+- El formato es compatible con el frontend que puede manejar ambos formatos
+- La paginación es opcional pero recomendada
+
+**Ejemplo de uso:**
+```bash
+curl -X GET "http://localhost:8080/api/rrhh/listar-oficiales?page=1&limit=20" \
+  -H "Authorization: <token_master>"
+```
+
+---
+
 **Última actualización:** 2025-01-27
-**Versión:** 1.0.0
+**Versión:** 1.1.0
 

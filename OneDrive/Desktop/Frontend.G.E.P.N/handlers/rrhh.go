@@ -444,19 +444,32 @@ func ListarOficialesHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ocultar contraseñas
+	// Ocultar contraseñas y datos sensibles
 	for i := range oficiales {
 		oficiales[i].Contraseña = ""
+		// No incluir datos sensibles como parientes, licencia, carnet médico
+		oficiales[i].Parientes = nil
+		oficiales[i].LicenciaConducir = ""
+		oficiales[i].CarnetMedico = ""
 	}
 
-	response := map[string]interface{}{
-		"oficiales": oficiales,
-		"total":     total,
-		"page":      page,
-		"limit":     limit,
-	}
-
+	// Retornar formato estándar con success y data
+	// El frontend puede manejar ambos formatos:
+	// 1. Con paginación: { success: true, data: { oficiales: [], total, page, limit } }
+	// 2. Sin paginación: { success: true, data: [] }
 	w.Header().Set("Content-Type", "application/json")
+	
+	// Formato con paginación (recomendado)
+	response := map[string]interface{}{
+		"success": true,
+		"data": map[string]interface{}{
+			"oficiales": oficiales,
+			"total":     total,
+			"page":      page,
+			"limit":     limit,
+		},
+	}
+	
 	json.NewEncoder(w).Encode(response)
 }
 
