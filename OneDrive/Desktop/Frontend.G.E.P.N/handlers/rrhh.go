@@ -224,16 +224,26 @@ func RegistrarOficialHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Crear oficial
 	if err := database.CrearOficial(&oficial); err != nil {
-		http.Error(w, "Error al crear el oficial: "+err.Error(), http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Error al crear el oficial: " + err.Error(),
+		})
 		return
 	}
 
 	// No retornar la contraseña
 	oficial.Contraseña = ""
 
+	// Retornar respuesta exitosa con formato estándar
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(oficial)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Oficial registrado correctamente",
+		"oficial": oficial,
+	})
 }
 
 // GenerarQRHandler genera o retorna el QR del oficial
