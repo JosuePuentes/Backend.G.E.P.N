@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v4"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -65,6 +66,7 @@ func LoginMasterHandler(w http.ResponseWriter, r *http.Request) {
 	// Buscar master por usuario
 	master, err := database.ObtenerUsuarioMasterPorUsuario(req.Usuario)
 	if err != nil {
+		log.Printf("Error al buscar usuario master: %v", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -484,16 +486,29 @@ func GetMasterFromToken(token string) (*models.UsuarioMaster, bool) {
 
 // InicializarUsuarioAdmin crea el usuario admin inicial si no existe
 func InicializarUsuarioAdmin() error {
-	// Verificar si ya existe el usuario admin
-	_, err := database.ObtenerUsuarioMasterPorUsuario("admin")
+	// Verificar si ya existe el usuario admin (sin filtrar por activo)
+	ctx, cancel := database.GetContext()
+	defer cancel()
+	collection := database.GetCollection("usuarios_master")
+	var master models.UsuarioMaster
+	err := collection.FindOne(ctx, bson.M{"usuario": "admin"}).Decode(&master)
 	if err == nil {
 		log.Println("ℹ️  Usuario admin ya existe")
+		// Asegurar que esté activo
+		if !master.Activo {
+			log.Println("⚠️  Usuario admin está inactivo, activándolo...")
+			master.Activo = true
+			if err := database.ActualizarEstadoMaster(master.ID, true); err != nil {
+				log.Printf("⚠️  Error al activar usuario admin: %v", err)
+			}
+		}
 		return nil
 	}
 
 	// Hashear contraseña
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte("Admin123!"), bcrypt.DefaultCost)
 	if err != nil {
+		log.Printf("❌ Error al hashear contraseña: %v", err)
 		return err
 	}
 
@@ -510,6 +525,7 @@ func InicializarUsuarioAdmin() error {
 	}
 
 	if err := database.CrearUsuarioMaster(&admin); err != nil {
+		log.Printf("❌ Error al crear usuario admin: %v", err)
 		return err
 	}
 
@@ -517,4 +533,29 @@ func InicializarUsuarioAdmin() error {
 	log.Println("   Usuario: admin")
 	log.Println("   Contraseña: Admin123! (CAMBIAR EN PRODUCCIÓN)")
 	return nil
+}
+
+// InicializarAdminHandler endpoint temporal para inicializar el admin manualmente
+func InicializarAdminHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := InicializarUsuarioAdmin()
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Error al inicializar admin: " + err.Error(),
+		})
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"mensaje": "Usuario admin inicializado correctamente",
+		"usuario": "admin",
+		"contraseña": "Admin123!",
+	})
 }

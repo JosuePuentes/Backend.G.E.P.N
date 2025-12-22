@@ -49,6 +49,7 @@ func SetupRoutes() *http.ServeMux {
 	// Rutas públicas de Master - Login y módulos
 	mux.HandleFunc("/api/master/login", handlers.LoginMasterHandler)
 	mux.HandleFunc("/api/master/modulos", handlers.ListarModulosHandler)
+	mux.HandleFunc("/api/master/inicializar-admin", handlers.InicializarAdminHandler) // Temporal para crear admin
 
 	// Rutas protegidas de Master (requieren autenticación)
 	mux.HandleFunc("/api/master/crear-usuario", handlers.CrearUsuarioMasterHandler)
