@@ -59,14 +59,17 @@ func LoginMasterHandler(w http.ResponseWriter, r *http.Request) {
 
 	var req models.LoginMasterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		log.Printf("❌ Error al decodificar login request: %v", err)
 		http.Error(w, "Error al decodificar la petición", http.StatusBadRequest)
 		return
 	}
 
+	log.Printf("🔍 Intento de login - Usuario: %s", req.Usuario)
+
 	// Buscar master por usuario
 	master, err := database.ObtenerUsuarioMasterPorUsuario(req.Usuario)
 	if err != nil {
-		log.Printf("Error al buscar usuario master: %v", err)
+		log.Printf("❌ Error al buscar usuario master '%s': %v", req.Usuario, err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -75,9 +78,12 @@ func LoginMasterHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("✅ Usuario encontrado: %s, Activo: %v", master.Usuario, master.Activo)
+
 	// Verificar contraseña con bcrypt
 	err = bcrypt.CompareHashAndPassword([]byte(master.Contraseña), []byte(req.Contraseña))
 	if err != nil {
+		log.Printf("❌ Error al verificar contraseña para usuario '%s': %v", req.Usuario, err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -85,6 +91,8 @@ func LoginMasterHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+
+	log.Printf("✅ Contraseña correcta para usuario: %s", req.Usuario)
 
 	// Verificar que esté activo
 	if !master.Activo {
