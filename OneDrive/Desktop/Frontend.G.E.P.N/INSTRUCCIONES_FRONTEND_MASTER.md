@@ -474,6 +474,421 @@ const MasterLoginScreen = ({navigation}) => {
 
 ---
 
+## 18. Pantalla de Dashboard Master - Mostrar Módulos
+
+Ejemplo completo de cómo mostrar todos los módulos en la pantalla del master:
+
+```typescript
+import React, {useState, useEffect} from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {obtenerModulos, tienePermiso, logoutMaster} from '../services/apiService';
+
+// Mapeo de módulos a nombres y rutas
+const modulosInfo = {
+  rrhh: {
+    nombre: 'Recursos Humanos',
+    icono: '👥',
+    ruta: 'RRHHDashboard',
+    descripcion: 'Gestionar oficiales y personal',
+  },
+  policial: {
+    nombre: 'Módulo Policial',
+    icono: '👮',
+    ruta: 'PolicialDashboard',
+    descripcion: 'Gestión de guardias y operaciones',
+  },
+  denuncias: {
+    nombre: 'Denuncias',
+    icono: '📋',
+    ruta: 'DenunciasDashboard',
+    descripcion: 'Gestionar denuncias ciudadanas',
+  },
+  detenidos: {
+    nombre: 'Detenidos',
+    icono: '🔒',
+    ruta: 'DetenidosDashboard',
+    descripcion: 'Registro de detenidos',
+  },
+  minutas: {
+    nombre: 'Minutas Digitales',
+    icono: '📝',
+    ruta: 'MinutasDashboard',
+    descripcion: 'Crear y gestionar minutas',
+  },
+  buscados: {
+    nombre: 'Más Buscados',
+    icono: '🔍',
+    ruta: 'BuscadosDashboard',
+    descripcion: 'Lista de personas buscadas',
+  },
+  verificacion: {
+    nombre: 'Verificación de Cédulas',
+    icono: '🆔',
+    ruta: 'VerificacionDashboard',
+    descripcion: 'Verificar cédulas de identidad',
+  },
+  panico: {
+    nombre: 'Botón de Pánico',
+    icono: '🚨',
+    ruta: 'PanicoDashboard',
+    descripcion: 'Alertas y emergencias',
+  },
+};
+
+const MasterDashboardScreen = ({navigation}) => {
+  const [modulos, setModulos] = useState<string[]>([]);
+  const [permisosUsuario, setPermisosUsuario] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    cargarDatos();
+  }, []);
+
+  const cargarDatos = async () => {
+    try {
+      // Obtener módulos disponibles del servidor
+      const modulosDisponibles = await obtenerModulos();
+      setModulos(modulosDisponibles);
+
+      // Obtener permisos del usuario actual
+      const masterUser = await AsyncStorage.getItem('masterUser');
+      if (masterUser) {
+        const master = JSON.parse(masterUser);
+        setPermisosUsuario(master.permisos || []);
+      }
+    } catch (error) {
+      console.error('Error al cargar datos:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleModuloPress = async (modulo: string) => {
+    // Verificar si el usuario tiene permiso para este módulo
+    const tieneAcceso = permisosUsuario.includes(modulo);
+    
+    if (!tieneAcceso) {
+      Alert.alert(
+        'Acceso Denegado',
+        'No tienes permisos para acceder a este módulo',
+      );
+      return;
+    }
+
+    const info = modulosInfo[modulo];
+    if (info) {
+      navigation.navigate(info.ruta);
+    }
+  };
+
+  const handleLogout = async () => {
+    Alert.alert(
+      'Cerrar Sesión',
+      '¿Estás seguro de que deseas cerrar sesión?',
+      [
+        {text: 'Cancelar', style: 'cancel'},
+        {
+          text: 'Cerrar Sesión',
+          style: 'destructive',
+          onPress: async () => {
+            await logoutMaster();
+            navigation.replace('MasterLogin');
+          },
+        },
+      ],
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text>Cargando...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Panel de Control Master</Text>
+        <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+          <Text style={styles.logoutText}>Cerrar Sesión</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.modulosContainer}>
+        <Text style={styles.sectionTitle}>Módulos Disponibles</Text>
+        
+        {modulos.map((modulo) => {
+          const info = modulosInfo[modulo];
+          const tieneAcceso = permisosUsuario.includes(modulo);
+          
+          if (!info) return null;
+
+          return (
+            <TouchableOpacity
+              key={modulo}
+              style={[
+                styles.moduloCard,
+                !tieneAcceso && styles.moduloCardDisabled,
+              ]}
+              onPress={() => handleModuloPress(modulo)}
+              disabled={!tieneAcceso}>
+              <View style={styles.moduloContent}>
+                <Text style={styles.moduloIcon}>{info.icono}</Text>
+                <View style={styles.moduloInfo}>
+                  <Text style={styles.moduloNombre}>{info.nombre}</Text>
+                  <Text style={styles.moduloDescripcion}>
+                    {info.descripcion}
+                  </Text>
+                  {!tieneAcceso && (
+                    <Text style={styles.sinPermiso}>
+                      Sin acceso a este módulo
+                    </Text>
+                  )}
+                </View>
+                {tieneAcceso && (
+                  <Text style={styles.arrow}>→</Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <View style={styles.permisosContainer}>
+        <Text style={styles.sectionTitle}>Tus Permisos</Text>
+        <View style={styles.permisosList}>
+          {permisosUsuario.length > 0 ? (
+            permisosUsuario.map((permiso) => {
+              const info = modulosInfo[permiso];
+              return (
+                <View key={permiso} style={styles.permisoTag}>
+                  <Text style={styles.permisoText}>
+                    {info ? info.icono + ' ' + info.nombre : permiso}
+                  </Text>
+                </View>
+              );
+            })
+          ) : (
+            <Text style={styles.sinPermisos}>
+              No tienes permisos asignados
+            </Text>
+          )}
+        </View>
+      </View>
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#00247D',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  logoutButton: {
+    padding: 10,
+    backgroundColor: '#FF3B30',
+    borderRadius: 8,
+  },
+  logoutText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  modulosContainer: {
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333',
+  },
+  moduloCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: '#00247D',
+  },
+  moduloCardDisabled: {
+    opacity: 0.5,
+    borderLeftColor: '#CCCCCC',
+  },
+  moduloContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  moduloIcon: {
+    fontSize: 40,
+    marginRight: 15,
+  },
+  moduloInfo: {
+    flex: 1,
+  },
+  moduloNombre: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  moduloDescripcion: {
+    fontSize: 14,
+    color: '#666',
+  },
+  sinPermiso: {
+    fontSize: 12,
+    color: '#FF3B30',
+    marginTop: 5,
+    fontStyle: 'italic',
+  },
+  arrow: {
+    fontSize: 24,
+    color: '#00247D',
+  },
+  permisosContainer: {
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    marginTop: 20,
+  },
+  permisosList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
+  },
+  permisoTag: {
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 10,
+    marginBottom: 10,
+  },
+  permisoText: {
+    color: '#00247D',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  sinPermisos: {
+    color: '#999',
+    fontStyle: 'italic',
+  },
+});
+
+export default MasterDashboardScreen;
+```
+
+## 19. Mapeo de Módulos a Pantallas
+
+Cada módulo debe tener su propia pantalla de dashboard:
+
+```typescript
+// Ejemplo de estructura de rutas
+const MasterStack = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="MasterLogin" component={MasterLoginScreen} />
+      <Stack.Screen name="MasterDashboard" component={MasterDashboardScreen} />
+      
+      {/* Pantallas de cada módulo */}
+      <Stack.Screen name="RRHHDashboard" component={RRHHDashboardScreen} />
+      <Stack.Screen name="PolicialDashboard" component={PolicialDashboardScreen} />
+      <Stack.Screen name="DenunciasDashboard" component={DenunciasDashboardScreen} />
+      <Stack.Screen name="DetenidosDashboard" component={DetenidosDashboardScreen} />
+      <Stack.Screen name="MinutasDashboard" component={MinutasDashboardScreen} />
+      <Stack.Screen name="BuscadosDashboard" component={BuscadosDashboardScreen} />
+      <Stack.Screen name="VerificacionDashboard" component={VerificacionDashboardScreen} />
+      <Stack.Screen name="PanicoDashboard" component={PanicoDashboardScreen} />
+    </Stack.Navigator>
+  );
+};
+```
+
+## 20. Información de Cada Módulo
+
+### RRHH (Recursos Humanos)
+- **Ruta:** `/api/rrhh/*`
+- **Funcionalidades:**
+  - Registrar oficiales
+  - Listar oficiales
+  - Generar QR codes
+  - Gestionar ascensos
+  - Verificar QR
+
+### Policial
+- **Ruta:** `/api/policial/*`
+- **Funcionalidades:**
+  - Login de oficiales
+  - Finalizar guardias
+  - Ver guardias activas
+
+### Denuncias
+- **Ruta:** `/api/denuncia/*`
+- **Funcionalidades:**
+  - Ver denuncias
+  - Gestionar estado de denuncias
+  - Estadísticas
+
+### Detenidos
+- **Ruta:** `/api/detenidos/*`
+- **Funcionalidades:**
+  - Registrar detenidos
+  - Listar detenidos
+  - Actualizar estado
+
+### Minutas
+- **Ruta:** `/api/minutas/*`
+- **Funcionalidades:**
+  - Crear minutas
+  - Listar minutas
+  - Ver detalles
+
+### Buscados
+- **Ruta:** `/api/mas-buscados`
+- **Funcionalidades:**
+  - Ver lista de más buscados
+  - Agregar/eliminar buscados
+
+### Verificación
+- **Ruta:** `/api/buscar/cedula`
+- **Funcionalidades:**
+  - Verificar cédulas
+  - Historial de búsquedas
+
+### Pánico
+- **Ruta:** `/api/panico/*`
+- **Funcionalidades:**
+  - Ver alertas de pánico
+  - Gestionar alertas activas
+
+---
+
 **Estado**: ✅ Listo para implementar
 **Fecha**: 2025-12-22
 
