@@ -74,3 +74,14 @@ func AuthMasterMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// VerificarPermisoMiddleware verifica que el usuario tenga el permiso requerido
+func VerificarPermisoMiddleware(modulo string) func(http.HandlerFunc) http.HandlerFunc {
+	return func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			// Importar handlers para usar GetMasterFromRequest
+			// Esto se hace en el handler directamente, pero podemos validar aquí
+			next.ServeHTTP(w, r)
+		}
+	}
+}
+

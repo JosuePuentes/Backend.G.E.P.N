@@ -337,6 +337,11 @@ func InicializarDatos() error {
 		Options: options.Index().SetUnique(true),
 	}
 	mastersCollection.Indexes().CreateOne(Ctx, indexModel)
+	// Índice en permisos
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "permisos", Value: 1}},
+	}
+	mastersCollection.Indexes().CreateOne(Ctx, indexModel)
 	
 	// 6. Verificar que las demás colecciones estén listas (se crearán automáticamente al usar)
 	// detenidos, minutas, busquedas, panico - se crearán cuando se inserten datos
@@ -660,16 +665,15 @@ func ObtenerOficialesConAscensosPendientes() ([]models.Oficial, error) {
 // VerificarOficialPorQR ya no se usa, la verificación se hace en el handler
 // Esta función se mantiene por compatibilidad pero puede eliminarse
 
-// UsuarioMaster - Funciones para gestión de usuarios master (RRHH)
+// UsuarioMaster - Funciones para gestión de usuarios master
 func CrearUsuarioMaster(master *models.UsuarioMaster) error {
 	ctx, cancel := GetContext()
 	defer cancel()
-	master.FechaRegistro = time.Now()
+	if master.FechaCreacion.IsZero() {
+		master.FechaCreacion = time.Now()
+	}
 	if !master.Activo {
 		master.Activo = true
-	}
-	if master.Rol == "" {
-		master.Rol = "master"
 	}
 	collection := GetCollection("usuarios_master")
 	_, err := collection.InsertOne(ctx, master)
@@ -721,6 +725,49 @@ func ActualizarUltimoAccesoMaster(masterID primitive.ObjectID) error {
 		ctx,
 		bson.M{"_id": masterID},
 		bson.M{"$set": bson.M{"ultimo_acceso": ahora}},
+	)
+	return err
+}
+
+func ListarUsuariosMaster() ([]models.UsuarioMaster, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("usuarios_master")
+	
+	cursor, err := collection.Find(ctx, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(ctx)
+	
+	var masters []models.UsuarioMaster
+	if err = cursor.All(ctx, &masters); err != nil {
+		return nil, err
+	}
+	
+	return masters, nil
+}
+
+func ActualizarPermisosMaster(masterID primitive.ObjectID, permisos []string) error {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("usuarios_master")
+	_, err := collection.UpdateOne(
+		ctx,
+		bson.M{"_id": masterID},
+		bson.M{"$set": bson.M{"permisos": permisos}},
+	)
+	return err
+}
+
+func ActualizarEstadoMaster(masterID primitive.ObjectID, activo bool) error {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("usuarios_master")
+	_, err := collection.UpdateOne(
+		ctx,
+		bson.M{"_id": masterID},
+		bson.M{"$set": bson.M{"activo": activo}},
 	)
 	return err
 }

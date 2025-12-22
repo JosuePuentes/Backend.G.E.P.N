@@ -46,12 +46,18 @@ func SetupRoutes() *http.ServeMux {
 	mux.HandleFunc("/api/panico/activar", handlers.ActivarPanicoHandler)
 	mux.HandleFunc("/api/panico/alertas", handlers.ListarAlertasPanicoHandler)
 
-	// Rutas públicas de Master (RRHH) - Registro y Login
-	mux.HandleFunc("/api/rrhh/master/registro", handlers.RegistroMasterHandler)
-	mux.HandleFunc("/api/rrhh/master/login", handlers.LoginMasterHandler)
-	mux.HandleFunc("/api/rrhh/master/verificar", handlers.VerificarMasterHandler)
+	// Rutas públicas de Master - Login y módulos
+	mux.HandleFunc("/api/master/login", handlers.LoginMasterHandler)
+	mux.HandleFunc("/api/master/modulos", handlers.ListarModulosHandler)
 
-	// Rutas de RRHH (requieren autenticación como master)
+	// Rutas protegidas de Master (requieren autenticación)
+	mux.HandleFunc("/api/master/crear-usuario", handlers.CrearUsuarioMasterHandler)
+	mux.HandleFunc("/api/master/usuarios", handlers.ListarUsuariosMasterHandler)
+	mux.HandleFunc("/api/master/usuarios/permisos/", handlers.ActualizarPermisosHandler)
+	mux.HandleFunc("/api/master/usuarios/activar/", handlers.ActivarUsuarioMasterHandler)
+	mux.HandleFunc("/api/master/verificar", handlers.VerificarMasterHandler)
+
+	// Rutas de RRHH (requieren autenticación como master con permiso rrhh)
 	mux.HandleFunc("/api/rrhh/registrar-oficial", handlers.RegistrarOficialHandler)
 	mux.HandleFunc("/api/rrhh/generar-qr/", handlers.GenerarQRHandler)
 	mux.HandleFunc("/api/rrhh/verificar-qr/", handlers.VerificarQRHandler)

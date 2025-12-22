@@ -2,6 +2,7 @@ package main
 
 import (
 	"gepn/database"
+	"gepn/handlers"
 	"gepn/middleware"
 	"gepn/routes"
 	"log"
@@ -23,6 +24,12 @@ func main() {
 	log.Println("📦 Inicializando datos por defecto...")
 	if err := database.InicializarDatos(); err != nil {
 		log.Printf("⚠️  Error al inicializar datos: %v", err)
+	}
+
+	// Inicializar usuario admin
+	log.Println("👤 Inicializando usuario admin...")
+	if err := handlers.InicializarUsuarioAdmin(); err != nil {
+		log.Printf("⚠️  Error al inicializar usuario admin: %v", err)
 	}
 
 	// Obtener el puerto de la variable de entorno, usar 8080 por defecto

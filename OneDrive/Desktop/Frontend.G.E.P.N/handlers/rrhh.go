@@ -119,6 +119,23 @@ func RegistrarOficialHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verificar que tenga permiso de rrhh
+	tienePermiso := false
+	for _, permiso := range master.Permisos {
+		if permiso == "rrhh" {
+			tienePermiso = true
+			break
+		}
+	}
+	if !tienePermiso {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "No tiene permisos para acceder al módulo RRHH",
+		})
+		return
+	}
+
 	var oficial models.Oficial
 	if err := json.NewDecoder(r.Body).Decode(&oficial); err != nil {
 		http.Error(w, "Error al decodificar la petición", http.StatusBadRequest)

@@ -229,25 +229,27 @@ type Oficial struct {
 	Parientes        *Parientes         `bson:"parientes,omitempty" json:"parientes,omitempty"`
 }
 
-// UsuarioMaster representa un usuario administrador de RRHH
+// UsuarioMaster representa un usuario administrador del sistema
 type UsuarioMaster struct {
 	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Usuario       string             `bson:"usuario" json:"usuario"` // Único
 	Nombre        string             `bson:"nombre" json:"nombre"`
-	Email         string             `bson:"email" json:"email"`
-	Usuario       string             `bson:"usuario" json:"usuario"`
-	Contraseña    string             `bson:"contraseña" json:"-"`
-	Rol           string             `bson:"rol" json:"rol"` // "master", "admin", "super_admin"
+	Email         string             `bson:"email" json:"email"` // Único
+	Contraseña    string             `bson:"contraseña" json:"-"` // Hash
+	Permisos      []string           `bson:"permisos" json:"permisos"` // ["rrhh", "policial", etc.]
 	Activo        bool               `bson:"activo" json:"activo"`
-	FechaRegistro time.Time          `bson:"fecha_registro" json:"fecha_registro"`
+	CreadoPor     string             `bson:"creado_por" json:"creado_por"`
+	FechaCreacion time.Time          `bson:"fecha_creacion" json:"fecha_creacion"`
 	UltimoAcceso  *time.Time         `bson:"ultimo_acceso,omitempty" json:"ultimo_acceso,omitempty"`
 }
 
 // RegistroMasterRequest representa la petición de registro de master
 type RegistroMasterRequest struct {
-	Nombre     string `json:"nombre"`
-	Email      string `json:"email"`
-	Usuario    string `json:"usuario"`
-	Contraseña string `json:"contraseña"`
+	Nombre     string   `json:"nombre"`
+	Email      string   `json:"email"`
+	Usuario    string   `json:"usuario"`
+	Contraseña string   `json:"contraseña"`
+	Permisos   []string `json:"permisos,omitempty"`
 }
 
 // LoginMasterRequest representa la petición de login de master
@@ -261,5 +263,19 @@ type LoginMasterResponse struct {
 	Token   string        `json:"token"`
 	Master  UsuarioMaster `json:"master"`
 	Mensaje string        `json:"mensaje"`
+}
+
+// CrearUsuarioMasterRequest representa la petición para crear un usuario master
+type CrearUsuarioMasterRequest struct {
+	Usuario    string   `json:"usuario"`
+	Nombre     string   `json:"nombre"`
+	Email      string   `json:"email"`
+	Contraseña string   `json:"contraseña"`
+	Permisos   []string `json:"permisos"`
+}
+
+// ActualizarPermisosRequest representa la petición para actualizar permisos
+type ActualizarPermisosRequest struct {
+	Permisos []string `json:"permisos"`
 }
 
