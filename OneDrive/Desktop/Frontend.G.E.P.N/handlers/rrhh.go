@@ -90,9 +90,32 @@ func generarQR(oficial *models.Oficial) (string, error) {
 }
 
 // RegistrarOficialHandler registra un nuevo oficial
+// Requiere autenticación como master
 func RegistrarOficialHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Verificar que el usuario sea master
+	token := r.Header.Get("Authorization")
+	master, ok := GetMasterFromToken(token)
+	if !ok || master == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Se requiere autenticación como usuario master para registrar oficiales",
+		})
+		return
+	}
+
+	// Verificar que el master esté activo
+	if !master.Activo {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "Usuario master inactivo",
+		})
 		return
 	}
 

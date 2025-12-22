@@ -229,3 +229,37 @@ type Oficial struct {
 	Parientes        *Parientes         `bson:"parientes,omitempty" json:"parientes,omitempty"`
 }
 
+// UsuarioMaster representa un usuario administrador de RRHH
+type UsuarioMaster struct {
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Nombre        string             `bson:"nombre" json:"nombre"`
+	Email         string             `bson:"email" json:"email"`
+	Usuario       string             `bson:"usuario" json:"usuario"`
+	Contraseña    string             `bson:"contraseña" json:"-"`
+	Rol           string             `bson:"rol" json:"rol"` // "master", "admin", "super_admin"
+	Activo        bool               `bson:"activo" json:"activo"`
+	FechaRegistro time.Time          `bson:"fecha_registro" json:"fecha_registro"`
+	UltimoAcceso  *time.Time         `bson:"ultimo_acceso,omitempty" json:"ultimo_acceso,omitempty"`
+}
+
+// RegistroMasterRequest representa la petición de registro de master
+type RegistroMasterRequest struct {
+	Nombre     string `json:"nombre"`
+	Email      string `json:"email"`
+	Usuario    string `json:"usuario"`
+	Contraseña string `json:"contraseña"`
+}
+
+// LoginMasterRequest representa la petición de login de master
+type LoginMasterRequest struct {
+	Usuario    string `json:"usuario"`
+	Contraseña string `json:"contraseña"`
+}
+
+// LoginMasterResponse representa la respuesta de login de master
+type LoginMasterResponse struct {
+	Token   string        `json:"token"`
+	Master  UsuarioMaster `json:"master"`
+	Mensaje string        `json:"mensaje"`
+}
+

@@ -2,6 +2,111 @@
 
 Este documento contiene todas las instrucciones para implementar el sistema de Recursos Humanos (RRHH) en el backend.
 
+## 🔐 Sistema de Usuarios Master
+
+### Registro de Usuario Master (Público)
+
+**Endpoint:** `POST /api/rrhh/master/registro`
+
+Este endpoint permite registrar usuarios master que tendrán acceso para gestionar el sistema RRHH.
+
+**Request Body:**
+```json
+{
+  "nombre": "Juan Pérez",
+  "email": "juan.perez@gepn.gob.ve",
+  "usuario": "jperez",
+  "contraseña": "password123"
+}
+```
+
+**Validaciones:**
+- Nombre obligatorio
+- Email obligatorio y único
+- Usuario obligatorio y único
+- Contraseña mínimo 6 caracteres (se hashea con bcrypt)
+
+**Respuesta:**
+```json
+{
+  "mensaje": "Usuario master registrado correctamente",
+  "master": {
+    "id": "...",
+    "nombre": "Juan Pérez",
+    "email": "juan.perez@gepn.gob.ve",
+    "usuario": "jperez",
+    "rol": "master",
+    "activo": true,
+    "fecha_registro": "2025-01-27T10:00:00Z"
+  }
+}
+```
+
+### Login de Usuario Master
+
+**Endpoint:** `POST /api/rrhh/master/login`
+
+**Request Body:**
+```json
+{
+  "usuario": "jperez",
+  "contraseña": "password123"
+}
+```
+
+**Respuesta:**
+```json
+{
+  "token": "20250127100000-master-token",
+  "master": {
+    "id": "...",
+    "nombre": "Juan Pérez",
+    "email": "juan.perez@gepn.gob.ve",
+    "usuario": "jperez",
+    "rol": "master",
+    "activo": true
+  },
+  "mensaje": "Login exitoso"
+}
+```
+
+### Verificar Token Master
+
+**Endpoint:** `GET /api/rrhh/master/verificar`
+
+**Headers:**
+```
+Authorization: <token>
+```
+
+**Respuesta:**
+```json
+{
+  "id": "...",
+  "nombre": "Juan Pérez",
+  "email": "juan.perez@gepn.gob.ve",
+  "usuario": "jperez",
+  "rol": "master",
+  "activo": true
+}
+```
+
+### ⚠️ Importante: Protección de Endpoints
+
+**Todos los endpoints de RRHH requieren autenticación como master:**
+
+- `POST /api/rrhh/registrar-oficial` - **Requiere token de master**
+- `GET /api/rrhh/listar-oficiales` - Puede ser público o requerir autenticación
+- `GET /api/rrhh/ascensos-pendientes` - **Requiere token de master**
+- `POST /api/rrhh/aprobar-ascenso/:oficialId` - **Requiere token de master**
+
+Para usar estos endpoints, incluir el header:
+```
+Authorization: <token_obtenido_del_login>
+```
+
+---
+
 ## 1. Instalar Dependencias
 
 ```bash
@@ -71,8 +176,15 @@ type Oficial struct {
 
 ## 3. Endpoints Implementados
 
-### POST /api/rrhh/registrar-oficial
-Registra un nuevo oficial en el sistema.
+### ⚠️ POST /api/rrhh/registrar-oficial
+**REQUIERE AUTENTICACIÓN COMO MASTER**
+
+Registra un nuevo oficial en el sistema. Solo usuarios master pueden registrar oficiales.
+
+**Headers:**
+```
+Authorization: <token_master>
+```
 
 **Request Body:**
 ```json

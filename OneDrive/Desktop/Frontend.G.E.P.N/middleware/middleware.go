@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -53,5 +54,23 @@ type responseWriter struct {
 func (rw *responseWriter) WriteHeader(code int) {
 	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
+}
+
+// AuthMasterMiddleware verifica que el usuario esté autenticado como master
+func AuthMasterMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token := r.Header.Get("Authorization")
+		if token == "" {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": "Token de autorización requerido",
+			})
+			return
+		}
+
+		// Verificar token (esto se hace en el handler, pero podemos validar aquí también)
+		next.ServeHTTP(w, r)
+	}
 }
 

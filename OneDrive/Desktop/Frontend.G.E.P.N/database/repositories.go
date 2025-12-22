@@ -323,11 +323,26 @@ func InicializarDatos() error {
 	}
 	oficialesCollection.Indexes().CreateOne(Ctx, indexModel)
 	
-	// 5. Verificar que las demás colecciones estén listas (se crearán automáticamente al usar)
+	// 5. Crear índices para usuarios_master
+	mastersCollection := GetCollection("usuarios_master")
+	// Índice único en usuario
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "usuario", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+	mastersCollection.Indexes().CreateOne(Ctx, indexModel)
+	// Índice único en email
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "email", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+	mastersCollection.Indexes().CreateOne(Ctx, indexModel)
+	
+	// 6. Verificar que las demás colecciones estén listas (se crearán automáticamente al usar)
 	// detenidos, minutas, busquedas, panico - se crearán cuando se inserten datos
 	
 	log.Println("✅ Inicialización de base de datos completada")
-	log.Println("📋 Colecciones disponibles: usuarios, detenidos, minutas, busquedas, mas_buscados, panico, ciudadanos, denuncias, oficiales")
+	log.Println("📋 Colecciones disponibles: usuarios, detenidos, minutas, busquedas, mas_buscados, panico, ciudadanos, denuncias, oficiales, usuarios_master")
 	return nil
 }
 
@@ -644,4 +659,69 @@ func ObtenerOficialesConAscensosPendientes() ([]models.Oficial, error) {
 
 // VerificarOficialPorQR ya no se usa, la verificación se hace en el handler
 // Esta función se mantiene por compatibilidad pero puede eliminarse
+
+// UsuarioMaster - Funciones para gestión de usuarios master (RRHH)
+func CrearUsuarioMaster(master *models.UsuarioMaster) error {
+	ctx, cancel := GetContext()
+	defer cancel()
+	master.FechaRegistro = time.Now()
+	if !master.Activo {
+		master.Activo = true
+	}
+	if master.Rol == "" {
+		master.Rol = "master"
+	}
+	collection := GetCollection("usuarios_master")
+	_, err := collection.InsertOne(ctx, master)
+	return err
+}
+
+func ObtenerUsuarioMasterPorUsuario(usuario string) (*models.UsuarioMaster, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("usuarios_master")
+	var master models.UsuarioMaster
+	err := collection.FindOne(ctx, bson.M{"usuario": usuario, "activo": true}).Decode(&master)
+	if err != nil {
+		return nil, err
+	}
+	return &master, nil
+}
+
+func ObtenerUsuarioMasterPorID(id primitive.ObjectID) (*models.UsuarioMaster, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("usuarios_master")
+	var master models.UsuarioMaster
+	err := collection.FindOne(ctx, bson.M{"_id": id}).Decode(&master)
+	if err != nil {
+		return nil, err
+	}
+	return &master, nil
+}
+
+func ObtenerUsuarioMasterPorEmail(email string) (*models.UsuarioMaster, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("usuarios_master")
+	var master models.UsuarioMaster
+	err := collection.FindOne(ctx, bson.M{"email": email}).Decode(&master)
+	if err != nil {
+		return nil, err
+	}
+	return &master, nil
+}
+
+func ActualizarUltimoAccesoMaster(masterID primitive.ObjectID) error {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("usuarios_master")
+	ahora := time.Now()
+	_, err := collection.UpdateOne(
+		ctx,
+		bson.M{"_id": masterID},
+		bson.M{"$set": bson.M{"ultimo_acceso": ahora}},
+	)
+	return err
+}
 
