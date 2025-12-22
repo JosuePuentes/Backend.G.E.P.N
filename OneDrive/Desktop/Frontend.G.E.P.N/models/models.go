@@ -98,10 +98,11 @@ type Panico struct {
 
 // LoginRequest representa la petición de login
 type LoginRequest struct {
-	Credencial string  `json:"credencial"`
-	PIN        string  `json:"pin"`
-	Latitud    float64 `json:"latitud,omitempty"`
-	Longitud   float64 `json:"longitud,omitempty"`
+	Credencial  string  `json:"credencial"`
+	PIN         string  `json:"pin"`         // Campo para compatibilidad - debe contener la contraseña
+	Contraseña  string  `json:"contraseña"` // Campo alternativo - debe contener la contraseña
+	Latitud     float64 `json:"latitud,omitempty"`
+	Longitud    float64 `json:"longitud,omitempty"`
 }
 
 // LoginResponse representa la respuesta de login
@@ -237,6 +238,7 @@ type UsuarioMaster struct {
 	Email         string             `bson:"email" json:"email"` // Único
 	Contraseña    string             `bson:"contraseña" json:"-"` // Hash
 	Permisos      []string           `bson:"permisos" json:"permisos"` // ["rrhh", "policial", etc.]
+	Estado        string             `bson:"estado,omitempty" json:"estado,omitempty"` // Para usuarios RRHH regionales
 	Activo        bool               `bson:"activo" json:"activo"`
 	CreadoPor     string             `bson:"creado_por" json:"creado_por"`
 	FechaCreacion time.Time          `bson:"fecha_creacion" json:"fecha_creacion"`
@@ -277,5 +279,61 @@ type CrearUsuarioMasterRequest struct {
 // ActualizarPermisosRequest representa la petición para actualizar permisos
 type ActualizarPermisosRequest struct {
 	Permisos []string `json:"permisos"`
+}
+
+// FuncionarioAsignado representa un funcionario asignado a una estación
+type FuncionarioAsignado struct {
+	FuncionarioID  primitive.ObjectID `bson:"funcionario_id" json:"funcionario_id"`
+	Nombre         string             `bson:"nombre" json:"nombre"`
+	Credencial     string             `bson:"credencial" json:"credencial"`
+	Rango          string             `bson:"rango" json:"rango"`
+	FechaAsignacion time.Time         `bson:"fecha_asignacion" json:"fecha_asignacion"`
+	Activo         bool               `bson:"activo" json:"activo"`
+}
+
+// Parte representa un parte de servicio
+type Parte struct {
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	NumeroParte   string             `bson:"numero_parte" json:"numero_parte"`
+	EstacionID    primitive.ObjectID `bson:"estacion_id" json:"estacion_id"`
+	FuncionarioID primitive.ObjectID `bson:"funcionario_id" json:"funcionario_id"`
+	TipoParte     string             `bson:"tipo_parte" json:"tipo_parte"` // "entrada", "salida", "incidente"
+	Descripcion   string             `bson:"descripcion" json:"descripcion"`
+	FechaHora     time.Time          `bson:"fecha_hora" json:"fecha_hora"`
+	Ubicacion     string             `bson:"ubicacion,omitempty" json:"ubicacion,omitempty"`
+	Latitud       float64            `bson:"latitud,omitempty" json:"latitud,omitempty"`
+	Longitud      float64            `bson:"longitud,omitempty" json:"longitud,omitempty"`
+	Estado        string             `bson:"estado" json:"estado"` // "activo", "cerrado", "cancelado"
+	FechaCreacion time.Time          `bson:"fecha_creacion" json:"fecha_creacion"`
+}
+
+// Estacion representa una estación policial
+type Estacion struct {
+	ID                  primitive.ObjectID   `bson:"_id,omitempty" json:"id"`
+	Nombre              string               `bson:"nombre" json:"nombre"`
+	Codigo              string               `bson:"codigo" json:"codigo"` // Único
+	CentroID            primitive.ObjectID   `bson:"centro_id" json:"centro_id"`
+	Estado              string               `bson:"estado" json:"estado"`
+	Municipio           string               `bson:"municipio" json:"municipio"`
+	Parroquia           string               `bson:"parroquia" json:"parroquia"`
+	Direccion           string               `bson:"direccion" json:"direccion"`
+	Telefono            string               `bson:"telefono,omitempty" json:"telefono,omitempty"`
+	FuncionariosAsignados []FuncionarioAsignado `bson:"funcionarios_asignados" json:"funcionarios_asignados"`
+	Activa              bool                 `bson:"activa" json:"activa"`
+	FechaCreacion       time.Time            `bson:"fecha_creacion" json:"fecha_creacion"`
+}
+
+// Centro representa un centro de coordinación
+type Centro struct {
+	ID            primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	Nombre        string             `bson:"nombre" json:"nombre"`
+	Codigo        string             `bson:"codigo" json:"codigo"` // Único
+	Estado        string             `bson:"estado" json:"estado"` // Estado/Región
+	Municipio     string             `bson:"municipio,omitempty" json:"municipio,omitempty"`
+	Direccion     string             `bson:"direccion" json:"direccion"`
+	Telefono      string             `bson:"telefono,omitempty" json:"telefono,omitempty"`
+	Responsable   string             `bson:"responsable,omitempty" json:"responsable,omitempty"`
+	Activo        bool               `bson:"activo" json:"activo"`
+	FechaCreacion time.Time          `bson:"fecha_creacion" json:"fecha_creacion"`
 }
 

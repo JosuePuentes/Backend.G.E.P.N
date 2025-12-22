@@ -39,7 +39,21 @@ func LoginPolicialHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verificar contraseña con bcrypt
-	err = bcrypt.CompareHashAndPassword([]byte(oficial.Contraseña), []byte(req.PIN))
+	// Usar contraseña del request (puede venir como PIN o contraseña)
+	// La contraseña registrada en RRHH es la que se usa para el login policial
+	contraseña := req.PIN
+	if contraseña == "" {
+		contraseña = req.Contraseña
+	}
+	if contraseña == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "La contraseña es obligatoria",
+		})
+		return
+	}
+	err = bcrypt.CompareHashAndPassword([]byte(oficial.Contraseña), []byte(contraseña))
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)

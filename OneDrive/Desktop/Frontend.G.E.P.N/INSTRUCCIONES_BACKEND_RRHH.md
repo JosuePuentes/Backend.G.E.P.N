@@ -330,7 +330,7 @@ Aprueba el ascenso de un oficial, actualizando su antigüedad.
 
 El endpoint `/api/policial/login` ahora:
 1. Busca por credencial en la colección `oficiales`
-2. Verifica contraseña con bcrypt
+2. Verifica contraseña con bcrypt (la misma contraseña registrada en RRHH)
 3. Verifica que esté activo
 4. Crea/actualiza guardia con GPS
 5. Retorna token JWT
@@ -344,6 +344,8 @@ El endpoint `/api/policial/login` ahora:
   "longitud": -66.8983
 }
 ```
+
+**Nota:** El campo `pin` debe contener la contraseña registrada en RRHH. El backend también acepta el campo `contraseña` como alternativa.
 
 ## 5. Generación de QR
 
@@ -404,17 +406,21 @@ db.oficiales.createIndex({ "estado": 1 })
 ### Credencial
 - Debe ser única
 - No puede estar vacía
+- Si ya está registrada, retorna error: "La credencial ya está registrada" (Status 409)
 
 ### Cédula
 - Debe ser única
 - No puede estar vacía
+- Si ya está registrada, retorna error: "La cédula ya está registrada" (Status 409)
 
 ### Contraseña
 - Mínimo 6 caracteres
 - Se hashea con bcrypt (salt rounds >= 10)
+- **IMPORTANTE:** Esta contraseña es la que se usará para el login en el módulo policial
+- El login policial acepta la contraseña en el campo "pin" o "contraseña" del request
 
 ### Rango
-Debe ser uno de los siguientes:
+Debe ser uno de los siguientes (en orden jerárquico):
 - Oficial
 - Primer Oficial
 - Oficial Jefe
@@ -427,6 +433,11 @@ Debe ser uno de los siguientes:
 - Comisario General
 - Comisario Mayor
 - Comisario Superior
+- Subcomisario
+- Comisario General de Brigada
+- Comisario General de División
+- Comisario General Inspector
+- Comisario General en Jefe
 
 ### Fecha de Graduación
 - Obligatoria
@@ -436,6 +447,11 @@ Debe ser uno de los siguientes:
 ### Antigüedad
 - Se calcula automáticamente si no se proporciona
 - Basada en la fecha de graduación
+
+### Destacado
+- Campo opcional
+- Debe permitirse estar vacío
+- Se asignará posteriormente en otros módulos (Centro de Coordinación)
 
 ## 9. Seguridad
 

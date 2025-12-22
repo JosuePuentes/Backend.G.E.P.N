@@ -30,6 +30,11 @@ var rangosValidos = []string{
 	"Comisario General",
 	"Comisario Mayor",
 	"Comisario Superior",
+	"Subcomisario",
+	"Comisario General de Brigada",
+	"Comisario General de División",
+	"Comisario General Inspector",
+	"Comisario General en Jefe",
 }
 
 // validarRango verifica si el rango es válido
@@ -171,14 +176,22 @@ func RegistrarOficialHandler(w http.ResponseWriter, r *http.Request) {
 	// Verificar credencial única
 	_, err := database.ObtenerOficialPorCredencial(oficial.Credencial)
 	if err == nil {
-		http.Error(w, "La credencial ya está en uso", http.StatusConflict)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "La credencial ya está registrada",
+		})
 		return
 	}
 
 	// Verificar cédula única
 	_, err = database.ObtenerOficialPorCedula(oficial.Cedula)
 	if err == nil {
-		http.Error(w, "La cédula ya está registrada", http.StatusConflict)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "La cédula ya está registrada",
+		})
 		return
 	}
 
@@ -193,6 +206,11 @@ func RegistrarOficialHandler(w http.ResponseWriter, r *http.Request) {
 	// Calcular antigüedad si no se proporciona
 	if oficial.Antiguedad == 0 {
 		oficial.Antiguedad = calcularAntiguedad(oficial.FechaGraduacion)
+	}
+
+	// Destacado es opcional - si viene vacío, dejarlo vacío (se asignará en otros módulos)
+	if oficial.Destacado == "" {
+		oficial.Destacado = ""
 	}
 
 	// Generar QR
