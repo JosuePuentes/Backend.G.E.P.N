@@ -143,9 +143,20 @@ func RegistrarOficialHandler(w http.ResponseWriter, r *http.Request) {
 
 	var oficial models.Oficial
 	if err := json.NewDecoder(r.Body).Decode(&oficial); err != nil {
-		http.Error(w, "Error al decodificar la petición", http.StatusBadRequest)
+		log.Printf("❌ Error al decodificar petición de registro: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Error al decodificar la petición: " + err.Error(),
+		})
 		return
 	}
+
+	// Log de debug para ver qué se recibió
+	log.Printf("📝 Intento de registro - Credencial: %s, Cédula: %s, Rango: %s, FechaGraduacion: %s", 
+		oficial.Credencial, oficial.Cedula, oficial.Rango, oficial.FechaGraduacion)
+	log.Printf("🔐 Contraseña recibida - Longitud: %d, Valor: [%s]", len(oficial.Contraseña), oficial.Contraseña)
 
 	// Validaciones con mensajes de error claros
 	if oficial.Credencial == "" {
