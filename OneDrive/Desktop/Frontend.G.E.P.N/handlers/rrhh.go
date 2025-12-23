@@ -170,13 +170,16 @@ func RegistrarOficialHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if oficial.Contraseña == "" || len(oficial.Contraseña) < 6 {
-		log.Printf("❌ Validación fallida: Contraseña inválida (longitud: %d)", len(oficial.Contraseña))
+	// Validar contraseña - verificar que no esté vacía y tenga al menos 6 caracteres
+	contraseñaLen := len(oficial.Contraseña)
+	if oficial.Contraseña == "" || contraseñaLen < 6 {
+		log.Printf("❌ Validación fallida: Contraseña inválida (longitud: %d, vacía: %v)", contraseñaLen, oficial.Contraseña == "")
+		log.Printf("🔍 Debug contraseña - Campo recibido: [%s], Bytes: %v", oficial.Contraseña, []byte(oficial.Contraseña))
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"success": false,
-			"error":   "La contraseña debe tener al menos 6 caracteres",
+			"error":   "La contraseña debe tener al menos 6 caracteres. Longitud recibida: " + strconv.Itoa(contraseñaLen),
 		})
 		return
 	}
