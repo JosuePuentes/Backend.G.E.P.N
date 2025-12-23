@@ -147,29 +147,70 @@ func RegistrarOficialHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validaciones
+	// Validaciones con mensajes de error claros
 	if oficial.Credencial == "" {
-		http.Error(w, "La credencial es obligatoria", http.StatusBadRequest)
+		log.Printf("❌ Validación fallida: Credencial vacía")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "La credencial es obligatoria",
+		})
 		return
 	}
 
 	if oficial.Cedula == "" {
-		http.Error(w, "La cédula es obligatoria", http.StatusBadRequest)
+		log.Printf("❌ Validación fallida: Cédula vacía")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "La cédula es obligatoria",
+		})
 		return
 	}
 
 	if oficial.Contraseña == "" || len(oficial.Contraseña) < 6 {
-		http.Error(w, "La contraseña debe tener al menos 6 caracteres", http.StatusBadRequest)
+		log.Printf("❌ Validación fallida: Contraseña inválida (longitud: %d)", len(oficial.Contraseña))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "La contraseña debe tener al menos 6 caracteres",
+		})
+		return
+	}
+
+	if oficial.Rango == "" {
+		log.Printf("❌ Validación fallida: Rango vacío")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "El rango es obligatorio",
+		})
 		return
 	}
 
 	if !validarRango(oficial.Rango) {
-		http.Error(w, "Rango inválido", http.StatusBadRequest)
+		log.Printf("❌ Validación fallida: Rango inválido: %s", oficial.Rango)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "Rango inválido: " + oficial.Rango + ". Rangos válidos: Oficial, Primer Oficial, Inspector, etc.",
+		})
 		return
 	}
 
 	if oficial.FechaGraduacion == "" {
-		http.Error(w, "La fecha de graduación es obligatoria", http.StatusBadRequest)
+		log.Printf("❌ Validación fallida: Fecha de graduación vacía")
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"error":   "La fecha de graduación es obligatoria",
+		})
 		return
 	}
 
