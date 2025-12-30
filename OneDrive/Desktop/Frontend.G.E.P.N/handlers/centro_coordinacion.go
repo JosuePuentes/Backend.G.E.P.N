@@ -11,6 +11,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // esAdmin verifica si el usuario es admin
@@ -645,7 +646,8 @@ func ListarPartesHandler(w http.ResponseWriter, r *http.Request) {
 		filter["tipo_parte"] = tipoParte
 	}
 
-	cursor, err := partesCollection.Find(ctx, filter).Sort(bson.M{"fecha_hora": -1})
+	opts := options.Find().SetSort(bson.D{{Key: "fecha_hora", Value: -1}})
+	cursor, err := partesCollection.Find(ctx, filter, opts)
 	if err != nil {
 		log.Printf("Error al listar partes: %v", err)
 		http.Error(w, "Error al listar partes", http.StatusInternalServerError)
