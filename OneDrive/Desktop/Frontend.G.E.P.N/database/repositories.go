@@ -342,12 +342,61 @@ func InicializarDatos() error {
 		Keys: bson.D{{Key: "permisos", Value: 1}},
 	}
 	mastersCollection.Indexes().CreateOne(Ctx, indexModel)
+	// Índice en estado para usuarios master (RRHH regionales)
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "estado", Value: 1}},
+	}
+	mastersCollection.Indexes().CreateOne(Ctx, indexModel)
 	
-	// 6. Verificar que las demás colecciones estén listas (se crearán automáticamente al usar)
+	// 6. Crear índices para Centro de Coordinación
+	// Índices para centros
+	centrosCollection := GetCollection("centros")
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "codigo", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+	centrosCollection.Indexes().CreateOne(Ctx, indexModel)
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "estado", Value: 1}},
+	}
+	centrosCollection.Indexes().CreateOne(Ctx, indexModel)
+	
+	// Índices para estaciones
+	estacionesCollection := GetCollection("estaciones")
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "codigo", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	}
+	estacionesCollection.Indexes().CreateOne(Ctx, indexModel)
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "centro_id", Value: 1}},
+	}
+	estacionesCollection.Indexes().CreateOne(Ctx, indexModel)
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "estado", Value: 1}},
+	}
+	estacionesCollection.Indexes().CreateOne(Ctx, indexModel)
+	
+	// Índices para partes
+	partesCollection := GetCollection("partes")
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "estacion_id", Value: 1}},
+	}
+	partesCollection.Indexes().CreateOne(Ctx, indexModel)
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "funcionario_id", Value: 1}},
+	}
+	partesCollection.Indexes().CreateOne(Ctx, indexModel)
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "fecha_hora", Value: -1}},
+	}
+	partesCollection.Indexes().CreateOne(Ctx, indexModel)
+	
+	// 7. Verificar que las demás colecciones estén listas (se crearán automáticamente al usar)
 	// detenidos, minutas, busquedas, panico - se crearán cuando se inserten datos
 	
 	log.Println("✅ Inicialización de base de datos completada")
-	log.Println("📋 Colecciones disponibles: usuarios, detenidos, minutas, busquedas, mas_buscados, panico, ciudadanos, denuncias, oficiales, usuarios_master")
+	log.Println("📋 Colecciones disponibles: usuarios, detenidos, minutas, busquedas, mas_buscados, panico, ciudadanos, denuncias, oficiales, usuarios_master, centros, estaciones, partes")
 	return nil
 }
 
@@ -446,6 +495,68 @@ func GenerarNumeroDenuncia() (string, error) {
 	
 	numero := count + 1
 	return fmt.Sprintf("DEN-%d-%04d", año, numero), nil
+}
+
+// ListarTodasDenuncias lista todas las denuncias (para usuarios del sistema)
+func ListarTodasDenuncias(page, limit int, estado string) ([]models.Denuncia, int64, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("denuncias")
+	
+	// Construir filtro
+	filter := bson.M{}
+	if estado != "" {
+		filter["estado"] = estado
+	}
+	
+	// Contar total
+	total, err := collection.CountDocuments(ctx, filter)
+	if err != nil {
+		return nil, 0, err
+	}
+	
+	// Paginación
+	skip := (page - 1) * limit
+	opts := options.Find().SetSkip(int64(skip)).SetLimit(int64(limit)).SetSort(bson.D{{Key: "fecha_denuncia", Value: -1}})
+	
+	cursor, err := collection.Find(ctx, filter, opts)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer cursor.Close(ctx)
+	
+	var denuncias []models.Denuncia
+	if err = cursor.All(ctx, &denuncias); err != nil {
+		return nil, 0, err
+	}
+	
+	return denuncias, total, nil
+}
+
+// ObtenerDenunciaPorID obtiene una denuncia por su ID
+func ObtenerDenunciaPorID(id primitive.ObjectID) (*models.Denuncia, error) {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("denuncias")
+	var denuncia models.Denuncia
+	err := collection.FindOne(ctx, bson.M{"_id": id}).Decode(&denuncia)
+	if err != nil {
+		return nil, err
+	}
+	return &denuncia, nil
+}
+
+// ActualizarEstadoDenuncia actualiza el estado de una denuncia
+func ActualizarEstadoDenuncia(id primitive.ObjectID, estado string) error {
+	ctx, cancel := GetContext()
+	defer cancel()
+	collection := GetCollection("denuncias")
+	_, err := collection.UpdateOne(
+		ctx,
+		bson.M{"_id": id},
+		bson.M{"$set": bson.M{"estado": estado}},
+	)
+	return err
 }
 
 // Guardias

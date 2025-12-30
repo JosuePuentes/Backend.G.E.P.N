@@ -27,6 +27,11 @@ func SetupRoutes() *http.ServeMux {
 	// Rutas de denuncias (requieren autenticación de ciudadano)
 	mux.HandleFunc("/api/denuncia/crear", handlers.CrearDenunciaHandler)
 	mux.HandleFunc("/api/denuncia/mis-denuncias", handlers.MisDenunciasHandler)
+	
+	// Rutas de denuncias para usuarios del sistema (requieren autenticación de master con permiso "denuncias")
+	mux.HandleFunc("/api/denuncia/listar", handlers.ListarTodasDenunciasHandler)
+	mux.HandleFunc("/api/denuncia/obtener", handlers.ObtenerDenunciaHandler)
+	mux.HandleFunc("/api/denuncia/actualizar-estado", handlers.ActualizarEstadoDenunciaHandler)
 
 	// Rutas protegidas - Detenidos
 	mux.HandleFunc("/api/detenidos", handlers.CrearDetenidoHandler)
@@ -66,6 +71,13 @@ func SetupRoutes() *http.ServeMux {
 	mux.HandleFunc("/api/rrhh/listar-oficiales", handlers.ListarOficialesHandler)
 	mux.HandleFunc("/api/rrhh/ascensos-pendientes", handlers.AscensosPendientesHandler)
 	mux.HandleFunc("/api/rrhh/aprobar-ascenso/", handlers.AprobarAscensoHandler)
+
+	// Rutas de Centro de Coordinación (requieren autenticación como master)
+	mux.HandleFunc("/api/centro-coordinacion/centros", handlers.CentrosHandler)
+	mux.HandleFunc("/api/centro-coordinacion/estaciones", handlers.EstacionesHandler)
+	mux.HandleFunc("/api/centro-coordinacion/estaciones/", handlers.AsignarFuncionarioHandler)
+	mux.HandleFunc("/api/centro-coordinacion/estaciones/", handlers.ListarFuncionariosEstacionHandler)
+	mux.HandleFunc("/api/centro-coordinacion/partes", handlers.PartesHandler)
 
 	return mux
 }
