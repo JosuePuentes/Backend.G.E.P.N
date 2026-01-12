@@ -75,8 +75,8 @@ func SetupRoutes() *http.ServeMux {
 	// Rutas de Centro de Coordinación (requieren autenticación como master)
 	mux.HandleFunc("/api/centro-coordinacion/centros", handlers.CentrosHandler)
 	mux.HandleFunc("/api/centro-coordinacion/estaciones", handlers.EstacionesHandler)
-	mux.HandleFunc("/api/centro-coordinacion/estaciones/", handlers.AsignarFuncionarioHandler)
-	mux.HandleFunc("/api/centro-coordinacion/estaciones/", handlers.ListarFuncionariosEstacionHandler)
+	mux.HandleFunc("/api/centro-coordinacion/estaciones/asignar", handlers.AsignarFuncionarioHandler)
+	mux.HandleFunc("/api/centro-coordinacion/estaciones/funcionarios", handlers.ListarFuncionariosEstacionHandler)
 	mux.HandleFunc("/api/centro-coordinacion/partes", handlers.PartesHandler)
 
 	return mux
