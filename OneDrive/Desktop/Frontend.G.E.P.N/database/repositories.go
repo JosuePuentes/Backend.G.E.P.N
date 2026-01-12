@@ -12,6 +12,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // Usuarios
@@ -392,11 +393,110 @@ func InicializarDatos() error {
 	}
 	partesCollection.Indexes().CreateOne(Ctx, indexModel)
 	
-	// 7. Verificar que las demás colecciones estén listas (se crearán automáticamente al usar)
+	// 7. Inicializar funcionarios de prueba con PIN para patrullaje
+	oficialesParaPatrullaje := GetCollection("oficiales")
+	countOficiales, err := oficialesParaPatrullaje.CountDocuments(Ctx, bson.M{"credencial": bson.M{"$in": []string{"POLICIA-12345", "POLICIA-67890"}}})
+	if err != nil {
+		countOficiales = 0
+	}
+	
+	if countOficiales == 0 {
+		// Hashear PINs
+		hashedPIN1, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
+		hashedPIN2, _ := bcrypt.GenerateFromPassword([]byte("654321"), bcrypt.DefaultCost)
+		hashedPassword1, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+		hashedPassword2, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+		
+		funcionariosParaPrueba := []interface{}{
+			models.Oficial{
+				ID:               primitive.NewObjectID(),
+				PrimerNombre:     "Juan",
+				SegundoNombre:    "Carlos",
+				PrimerApellido:   "Pérez",
+				SegundoApellido:  "López",
+				Cedula:           "V-12345678",
+				Contraseña:       string(hashedPassword1),
+				PIN:              string(hashedPIN1),
+				FechaNacimiento:  "15/05/1990",
+				Estatura:         1.75,
+				ColorPiel:        "Morena",
+				TipoSangre:       "O+",
+				CiudadNacimiento: "Caracas",
+				Credencial:       "POLICIA-12345",
+				Rango:            "Oficial",
+				Destacado:        "Patrullaje Urbano",
+				FechaGraduacion:  "20/06/2015",
+				Antiguedad:       10.5,
+				Estado:           "Distrito Capital",
+				Municipio:        "Libertador",
+				Parroquia:        "El Valle",
+				FotoCara:         "https://via.placeholder.com/150",
+				FechaRegistro:    time.Now(),
+				Activo:           true,
+			},
+			models.Oficial{
+				ID:               primitive.NewObjectID(),
+				PrimerNombre:     "María",
+				SegundoNombre:    "José",
+				PrimerApellido:   "González",
+				SegundoApellido:  "Rodríguez",
+				Cedula:           "V-87654321",
+				Contraseña:       string(hashedPassword2),
+				PIN:              string(hashedPIN2),
+				FechaNacimiento:  "22/08/1988",
+				Estatura:         1.65,
+				ColorPiel:        "Blanca",
+				TipoSangre:       "A+",
+				CiudadNacimiento: "Valencia",
+				Credencial:       "POLICIA-67890",
+				Rango:            "Sargento",
+				Destacado:        "Patrullaje Motorizado",
+				FechaGraduacion:  "15/03/2012",
+				Antiguedad:       13.8,
+				Estado:           "Carabobo",
+				Municipio:        "Valencia",
+				Parroquia:        "Centro",
+				FotoCara:         "https://via.placeholder.com/150",
+				FechaRegistro:    time.Now(),
+				Activo:           true,
+			},
+		}
+		
+		_, err = oficialesParaPatrullaje.InsertMany(Ctx, funcionariosParaPrueba)
+		if err != nil {
+			log.Printf("⚠️  Error al crear funcionarios de prueba para patrullaje: %v", err)
+		} else {
+			log.Println("✅ Funcionarios de prueba para patrullaje creados:")
+			log.Println("   - POLICIA-12345 (Juan Pérez) PIN: 123456")
+			log.Println("   - POLICIA-67890 (María González) PIN: 654321")
+		}
+	} else {
+		log.Println("ℹ️  Funcionarios de prueba para patrullaje ya existen")
+	}
+	
+	// 8. Crear índices para patrullajes
+	patrullajesCollection := GetCollection("patrullajes")
+	// Índice en funcionario_id
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "funcionario_id", Value: 1}},
+	}
+	patrullajesCollection.Indexes().CreateOne(Ctx, indexModel)
+	// Índice en activo
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "activo", Value: 1}},
+	}
+	patrullajesCollection.Indexes().CreateOne(Ctx, indexModel)
+	// Índice en fecha_inicio (descendente)
+	indexModel = mongo.IndexModel{
+		Keys: bson.D{{Key: "fecha_inicio", Value: -1}},
+	}
+	patrullajesCollection.Indexes().CreateOne(Ctx, indexModel)
+	
+	// 9. Verificar que las demás colecciones estén listas (se crearán automáticamente al usar)
 	// detenidos, minutas, busquedas, panico - se crearán cuando se inserten datos
 	
 	log.Println("✅ Inicialización de base de datos completada")
-	log.Println("📋 Colecciones disponibles: usuarios, detenidos, minutas, busquedas, mas_buscados, panico, ciudadanos, denuncias, oficiales, usuarios_master, centros, estaciones, partes")
+	log.Println("📋 Colecciones disponibles: usuarios, detenidos, minutas, busquedas, mas_buscados, panico, ciudadanos, denuncias, oficiales, usuarios_master, centros, estaciones, partes, patrullajes")
 	return nil
 }
 

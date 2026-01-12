@@ -207,6 +207,7 @@ type Oficial struct {
 	SegundoApellido  string             `bson:"segundo_apellido" json:"segundo_apellido"`
 	Cedula           string             `bson:"cedula" json:"cedula"`
 	Contraseña       string             `bson:"contraseña" json:"-"`
+	PIN              string             `bson:"pin,omitempty" json:"-"` // PIN de 6 dígitos para patrullaje (hasheado)
 	FechaNacimiento  string             `bson:"fecha_nacimiento" json:"fecha_nacimiento"`
 	Estatura         float64            `bson:"estatura" json:"estatura"`
 	ColorPiel        string             `bson:"color_piel" json:"color_piel"`
@@ -335,5 +336,47 @@ type Centro struct {
 	Responsable   string             `bson:"responsable,omitempty" json:"responsable,omitempty"`
 	Activo        bool               `bson:"activo" json:"activo"`
 	FechaCreacion time.Time          `bson:"fecha_creacion" json:"fecha_creacion"`
+}
+
+// Patrullaje representa un patrullaje activo
+type Patrullaje struct {
+	ID                  primitive.ObjectID `bson:"_id,omitempty" json:"id"`
+	FuncionarioID       primitive.ObjectID `bson:"funcionario_id" json:"funcionario_id"`
+	Credencial          string             `bson:"credencial" json:"credencial"`
+	Nombre              string             `bson:"nombre" json:"nombre"`
+	Apellido            string             `bson:"apellido" json:"apellido"`
+	Rango               string             `bson:"rango" json:"rango"`
+	Unidad              string             `bson:"unidad" json:"unidad"`
+	Latitud             float64            `bson:"latitud" json:"latitud"`
+	Longitud            float64            `bson:"longitud" json:"longitud"`
+	Color               string             `bson:"color" json:"color"` // "rojo" o "azul"
+	FechaInicio         time.Time          `bson:"fecha_inicio" json:"fecha_inicio"`
+	FechaFin            *time.Time         `bson:"fecha_fin,omitempty" json:"fecha_fin,omitempty"`
+	UltimaActualizacion time.Time          `bson:"ultima_actualizacion" json:"ultima_actualizacion"`
+	Activo              bool               `bson:"activo" json:"activo"`
+}
+
+// LoginPatrullajeRequest representa la petición de login para patrullaje
+type LoginPatrullajeRequest struct {
+	Credencial string `json:"credencial"`
+	PIN        string `json:"pin"`
+}
+
+// IniciarPatrullajeRequest representa la petición para iniciar patrullaje
+type IniciarPatrullajeRequest struct {
+	Latitud  float64 `json:"latitud"`
+	Longitud float64 `json:"longitud"`
+}
+
+// ActualizarUbicacionRequest representa la petición para actualizar ubicación
+type ActualizarUbicacionRequest struct {
+	PatrullajeID string  `json:"patrullajeId"`
+	Latitud      float64 `json:"latitud"`
+	Longitud     float64 `json:"longitud"`
+}
+
+// FinalizarPatrullajeRequest representa la petición para finalizar patrullaje
+type FinalizarPatrullajeRequest struct {
+	PatrullajeID string `json:"patrullajeId"`
 }
 

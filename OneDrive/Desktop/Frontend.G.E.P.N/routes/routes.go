@@ -79,6 +79,14 @@ func SetupRoutes() *http.ServeMux {
 	mux.HandleFunc("/api/centro-coordinacion/estaciones/funcionarios", handlers.ListarFuncionariosEstacionHandler)
 	mux.HandleFunc("/api/centro-coordinacion/partes", handlers.PartesHandler)
 
+	// Rutas de Patrullaje
+	mux.HandleFunc("/api/patrullaje/login", handlers.LoginPatrullajeHandler)
+	mux.HandleFunc("/api/patrullaje/iniciar", handlers.IniciarPatrullajeHandler)
+	mux.HandleFunc("/api/patrullaje/actualizar-ubicacion", handlers.ActualizarUbicacionHandler)
+	mux.HandleFunc("/api/patrullaje/activos", handlers.ObtenerPatrullajesActivosHandler)
+	mux.HandleFunc("/api/patrullaje/finalizar", handlers.FinalizarPatrullajeHandler)
+	mux.HandleFunc("/api/patrullaje/historial", handlers.HistorialPatrullajesHandler)
+
 	return mux
 }
 
