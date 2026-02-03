@@ -687,6 +687,97 @@ func ValidarCoordenadas(lat, lon float64) error {
 	return nil
 }
 
+// CrearUsuarioPruebaPatrullajeHandler crea un oficial de prueba para patrullaje si no existe.
+// GET /api/patrullaje/crear-usuario-prueba - devuelve credencial y PIN para poder entrar.
+func CrearUsuarioPruebaPatrullajeHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodPost {
+		http.Error(w, "Método no permitido", http.StatusMethodNotAllowed)
+		return
+	}
+
+	const credencialPrueba = "PATRULLA-TEST"
+	const pinPrueba = "123456"
+
+	ctx, cancel := database.GetContext()
+	defer cancel()
+	collection := database.GetCollection("oficiales")
+
+	var existente models.Oficial
+	err := collection.FindOne(ctx, bson.M{"credencial": credencialPrueba}).Decode(&existente)
+	if err == nil {
+		// Ya existe, devolver las credenciales (sin cambiar el PIN)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": true,
+			"message": "Usuario de prueba ya existe. Usa estas credenciales para entrar.",
+			"credencial": credencialPrueba,
+			"pin":        pinPrueba,
+		})
+		return
+	}
+	if err != mongo.ErrNoDocuments {
+		log.Printf("Error al buscar oficial de prueba: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "Error al verificar usuario de prueba",
+		})
+		return
+	}
+
+	// Crear oficial de prueba
+	hashedPIN, _ := bcrypt.GenerateFromPassword([]byte(pinPrueba), bcrypt.DefaultCost)
+	hashedPass, _ := bcrypt.GenerateFromPassword([]byte("Prueba123"), bcrypt.DefaultCost)
+
+	oficial := models.Oficial{
+		ID:               primitive.NewObjectID(),
+		PrimerNombre:     "Oficial",
+		SegundoNombre:    "Prueba",
+		PrimerApellido:   "Patrullaje",
+		SegundoApellido:  "GEPN",
+		Cedula:           "V-00000000",
+		Contraseña:       string(hashedPass),
+		PIN:              string(hashedPIN),
+		FechaNacimiento:  "01/01/1990",
+		Estatura:         1.70,
+		ColorPiel:        "Morena",
+		TipoSangre:       "O+",
+		CiudadNacimiento: "Caracas",
+		Credencial:       credencialPrueba,
+		Rango:            "Oficial",
+		Destacado:        "Patrullaje",
+		FechaGraduacion:  "01/01/2020",
+		Antiguedad:       5,
+		Estado:           "Distrito Capital",
+		Municipio:        "Libertador",
+		Parroquia:        "El Valle",
+		FotoCara:         "",
+		FechaRegistro:    time.Now(),
+		Activo:           true,
+	}
+
+	if err := database.CrearOficial(&oficial); err != nil {
+		log.Printf("Error al crear oficial de prueba: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"success": false,
+			"message": "Error al crear usuario de prueba: " + err.Error(),
+		})
+		return
+	}
+
+	log.Printf("Usuario de prueba patrullaje creado: %s PIN: %s", credencialPrueba, pinPrueba)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "Usuario de prueba creado. Usa estas credenciales en el login de patrullaje.",
+		"credencial": credencialPrueba,
+		"pin":        pinPrueba,
+	})
+}
+
 // ValidarPIN valida que el PIN tenga el formato correcto
 func ValidarPIN(pin string) error {
 	if len(pin) != 6 {
@@ -703,3 +794,4 @@ func ValidarPIN(pin string) error {
 func generatePatrullajeToken() string {
 	return "patrullaje-" + time.Now().Format("20060102150405")
 }
+

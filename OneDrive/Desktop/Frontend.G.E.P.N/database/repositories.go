@@ -473,6 +473,50 @@ func InicializarDatos() error {
 	} else {
 		log.Println("ℹ️  Funcionarios de prueba para patrullaje ya existen")
 	}
+
+	// 7b. Asegurar usuario PATRULLA-TEST para login de patrullaje (credencial fija para entrar)
+	colOficiales := GetCollection("oficiales")
+	var existePatrullajeTest models.Oficial
+	errPatrullaje := colOficiales.FindOne(Ctx, bson.M{"credencial": "PATRULLA-TEST"}).Decode(&existePatrullajeTest)
+	if errPatrullaje == mongo.ErrNoDocuments {
+		hashedPIN, _ := bcrypt.GenerateFromPassword([]byte("123456"), bcrypt.DefaultCost)
+		hashedPass, _ := bcrypt.GenerateFromPassword([]byte("Prueba123"), bcrypt.DefaultCost)
+		oficialPatrullajeTest := models.Oficial{
+			ID:               primitive.NewObjectID(),
+			PrimerNombre:     "Oficial",
+			SegundoNombre:    "Prueba",
+			PrimerApellido:   "Patrullaje",
+			SegundoApellido:  "GEPN",
+			Cedula:           "V-00000000",
+			Contraseña:       string(hashedPass),
+			PIN:              string(hashedPIN),
+			FechaNacimiento:  "01/01/1990",
+			Estatura:         1.70,
+			ColorPiel:        "Morena",
+			TipoSangre:       "O+",
+			CiudadNacimiento: "Caracas",
+			Credencial:       "PATRULLA-TEST",
+			Rango:            "Oficial",
+			Destacado:        "Patrullaje",
+			FechaGraduacion:  "01/01/2020",
+			Antiguedad:       5,
+			Estado:           "Distrito Capital",
+			Municipio:        "Libertador",
+			Parroquia:        "El Valle",
+			FotoCara:         "",
+			FechaRegistro:    time.Now(),
+			Activo:           true,
+		}
+		_, errIns := colOficiales.InsertOne(Ctx, oficialPatrullajeTest)
+		if errIns != nil {
+			log.Printf("⚠️  Error al crear usuario PATRULLA-TEST: %v", errIns)
+		} else {
+			log.Println("✅ Usuario de patrullaje creado en base de datos:")
+			log.Println("   Credencial: PATRULLA-TEST | PIN: 123456")
+		}
+	} else if errPatrullaje == nil {
+		log.Println("ℹ️  Usuario PATRULLA-TEST ya existe en base de datos")
+	}
 	
 	// 8. Crear índices para patrullajes
 	patrullajesCollection := GetCollection("patrullajes")

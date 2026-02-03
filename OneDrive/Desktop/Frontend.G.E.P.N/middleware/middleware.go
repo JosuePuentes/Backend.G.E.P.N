@@ -44,9 +44,9 @@ func CORSMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 
-		// Manejar preflight request
+		// Manejar preflight request (200 OK para máxima compatibilidad con proxies/Render)
 		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusNoContent)
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 

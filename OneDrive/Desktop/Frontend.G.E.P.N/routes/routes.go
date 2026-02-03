@@ -81,6 +81,7 @@ func SetupRoutes() *http.ServeMux {
 
 	// Rutas de Patrullaje
 	mux.HandleFunc("/api/patrullaje/login", handlers.LoginPatrullajeHandler)
+	mux.HandleFunc("/api/patrullaje/crear-usuario-prueba", handlers.CrearUsuarioPruebaPatrullajeHandler)
 	mux.HandleFunc("/api/patrullaje/iniciar", handlers.IniciarPatrullajeHandler)
 	mux.HandleFunc("/api/patrullaje/actualizar-ubicacion", handlers.ActualizarUbicacionHandler)
 	mux.HandleFunc("/api/patrullaje/activos", handlers.ObtenerPatrullajesActivosHandler)
