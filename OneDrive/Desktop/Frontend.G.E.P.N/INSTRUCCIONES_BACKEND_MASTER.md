@@ -388,3 +388,4 @@ curl -X POST http://localhost:8080/api/rrhh/registrar-oficial \
 **Fecha**: 2025-01-27
 **Versión**: 2.0.0
 
+

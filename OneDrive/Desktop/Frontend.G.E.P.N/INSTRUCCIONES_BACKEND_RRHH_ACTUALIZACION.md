@@ -235,3 +235,4 @@ Se ha creado el archivo `OPCIONES_FRONTEND_RRHH.md` con todas las opciones dispo
 **Fecha de actualización:** 2025-01-27
 **Versión:** 1.1.0
 
+

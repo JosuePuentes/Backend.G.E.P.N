@@ -1351,3 +1351,4 @@ const API_BASE_URL = 'https://gepn-backend.onrender.com';
 ## ✅ FIN DE LAS INSTRUCCIONES
 
 Con esto, el backend está **100% listo para producción** y la app móvil puede ser distribuida a los usuarios finales. 🎊
+
